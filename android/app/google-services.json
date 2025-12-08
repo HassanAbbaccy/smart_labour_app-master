@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "520907284454",
+    "project_id": "smartlabour-marketplace",
+    "storage_bucket": "smartlabour-marketplace.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:520907284454:android:b137e25010b3cb032e8027",
+        "android_client_info": {
+          "package_name": "com.example.untitled4"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDtuuL0GktcUOXeL72u81enrz_2S8rFdM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
