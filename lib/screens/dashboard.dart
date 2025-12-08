@@ -2,6 +2,229 @@ import 'package:flutter/material.dart';
 import 'package:untitled4/widgets/custom_scaffold.dart';
 import 'package:untitled4/services/auth_service.dart';
 import 'package:untitled4/screens/signin_screen.dart';
+import 'package:untitled4/screens/home_screen.dart';
+import 'package:untitled4/screens/jobs_screen.dart';
+import 'package:untitled4/screens/messages_screen.dart';
+import 'package:untitled4/screens/profile_screen.dart';
+
+// Color scheme
+const Color primaryPurple = Color(0xFF7C3AED);
+const Color accentSkyBlue = Color(0xFF0EA5E9);
+const Color lightSkyBlue = Color(0xFFE0F2FE);
+const Color lightPurple = Color(0xFFF3E8FF);
+
+class Dashboard extends StatefulWidget {
+  const Dashboard({super.key});
+
+  @override
+  State<Dashboard> createState() => _DashboardState();
+}
+
+class _DashboardState extends State<Dashboard> {
+  int _selectedIndex = 3; // default to Dashboard tab index
+
+  Future<void> _handleSignOut() async {
+    await AuthService().signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const SignInScreen()),
+      (route) => false,
+    );
+  }
+
+  Widget _buildWelcomeSection() {
+    final user = AuthService().currentUser;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [primaryPurple, accentSkyBlue],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: primaryPurple.withOpacity(0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back',
+                  style: TextStyle(color: Colors.white.withOpacity(0.9)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  user != null ? '${user.firstName} ${user.lastName}' : 'User',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  user?.profession ?? 'Professional',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.white.withOpacity(0.2),
+                child: Text(
+                  user != null && user.firstName.isNotEmpty ? user.firstName[0].toUpperCase() : 'U',
+                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: _handleSignOut,
+                icon: const Icon(Icons.logout, size: 16),
+                label: const Text('Sign Out'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCards() {
+    final user = AuthService().currentUser;
+    return Row(
+      children: [
+        _statCard('Active', '${user?.activeJobs ?? 0}', primaryPurple, Icons.work),
+        const SizedBox(width: 12),
+        _statCard('Completed', '${user?.completedJobs ?? 0}', accentSkyBlue, Icons.check_circle),
+        const SizedBox(width: 12),
+        _statCard('Earnings', '\$${user?.monthlyEarnings?.toStringAsFixed(0) ?? '0'}', Colors.green, Icons.attach_money),
+      ],
+    );
+  }
+
+  Widget _statCard(String label, String value, Color color, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.15)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color),
+                const SizedBox(width: 8),
+                Text(label, style: const TextStyle(color: Colors.black54)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJobsPreview() {
+    final jobs = [
+      {'title': 'House Cleaning', 'location': 'Downtown', 'pay': '\$45/hr'},
+      {'title': 'Plumbing Repair', 'location': 'Midtown', 'pay': '\$60/hr'},
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Available Jobs', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ...jobs.map((j) => Card(
+              child: ListTile(
+                title: Text(j['title']!),
+                subtitle: Text('${j['location']} · ${j['pay']}'),
+                trailing: ElevatedButton(onPressed: () {}, child: const Text('Apply')),
+              ),
+            )),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScaffold(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('SmartLabour'),
+          centerTitle: true,
+          backgroundColor: primaryPurple,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildWelcomeSection(),
+              const SizedBox(height: 20),
+              _buildStatCards(),
+              const SizedBox(height: 20),
+              _buildJobsPreview(),
+            ],
+          ),
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            setState(() => _selectedIndex = index);
+            switch (index) {
+              case 0:
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HomeScreen()));
+                break;
+              case 1:
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const JobsScreen()));
+                break;
+              case 2:
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MessagesScreen()));
+                break;
+              case 3:
+                // already on Dashboard
+                break;
+              case 4:
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                break;
+            }
+          },
+          selectedItemColor: primaryPurple,
+          unselectedItemColor: Colors.grey,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Jobs'),
+            BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Messages'),
+            BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:untitled4/widgets/custom_scaffold.dart';
+import 'package:untitled4/services/auth_service.dart';
+import 'package:untitled4/screens/signin_screen.dart';
 
 // Color scheme
 const Color primaryPurple = Color(0xFF7C3AED);
@@ -34,59 +257,74 @@ class _DashboardState extends State<Dashboard> {
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Welcome Section
-                _buildWelcomeSection(),
-                const SizedBox(height: 24),
-
-                // Quick Stats
-                _buildQuickStats(),
-                const SizedBox(height: 24),
-
-                // Available Jobs Section
-                _buildAvailableJobsSection(),
-                const SizedBox(height: 24),
-
-                // My Active Tasks
-                _buildActiveTasksSection(),
-                const SizedBox(height: 24),
-
-                // Recommended Services
-                _buildRecommendedServicesSection(),
-              ],
-            ),
-          ),
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          selectedItemColor: primaryPurple,
-          unselectedItemColor: Colors.grey,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Jobs'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.message),
-              label: 'Messages',
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWelcomeSection() {
-    final user = AuthService().currentUser;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
+              child: Scaffold(
+                appBar: AppBar(
+                  title: const Text('SmartLabour'),
+                  centerTitle: true,
+                  elevation: 0,
+                  backgroundColor: primaryPurple,
+                  foregroundColor: Colors.white,
+                ),
+                // Keep the existing dashboard content as the default body.
+                body: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Welcome Section
+                        _buildWelcomeSection(),
+                        const SizedBox(height: 24),
+                        // Quick Stats
+                        _buildQuickStats(),
+                        const SizedBox(height: 24),
+                        // Available Jobs Section
+                        _buildAvailableJobsSection(),
+                        const SizedBox(height: 24),
+                        // My Active Tasks
+                        _buildActiveTasksSection(),
+                        const SizedBox(height: 24),
+                        // Recommended Services
+                        _buildRecommendedServicesSection(),
+                      ],
+                    ),
+                  ),
+                ),
+                bottomNavigationBar: BottomNavigationBar(
+                  currentIndex: _selectedIndex,
+                  onTap: (index) {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                    // Navigate to the selected screen (push routes so users can come back)
+                    switch (index) {
+                      case 0:
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HomeScreen()));
+                        break;
+                      case 1:
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const JobsScreen()));
+                        break;
+                      case 2:
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MessagesScreen()));
+                        break;
+                      case 3:
+                        // Dashboard (current) — do nothing
+                        break;
+                      case 4:
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                        break;
+                    }
+                  },
+                  items: const [
+                    BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+                    BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Jobs'),
+                    BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Messages'),
+                    BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
+                    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+                  ],
+                ),
+              ),
+            );
         gradient: LinearGradient(
           colors: [primaryPurple, accentSkyBlue],
           begin: Alignment.topLeft,
