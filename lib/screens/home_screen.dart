@@ -3,6 +3,8 @@ import 'package:untitled4/screens/jobs_screen.dart';
 import 'package:untitled4/screens/messages_screen.dart';
 import 'package:untitled4/screens/search_screen.dart';
 import 'package:untitled4/screens/profile_screen.dart';
+import 'package:untitled4/services/location_service.dart';
+import 'package:untitled4/screens/category_results_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,8 +70,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeScreenBody extends StatelessWidget {
+class HomeScreenBody extends StatefulWidget {
   const HomeScreenBody({super.key});
+
+  @override
+  State<HomeScreenBody> createState() => _HomeScreenBodyState();
+}
+
+class _HomeScreenBodyState extends State<HomeScreenBody> {
+  String _currentAddress = 'Gulberg III, Lahore'; // Default/Fallback
+  bool _isLoadingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    setState(() => _isLoadingLocation = true);
+    final location = await LocationService().getCurrentLocation();
+    if (mounted) {
+      setState(() {
+        _currentAddress = location;
+        _isLoadingLocation = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,75 +107,90 @@ class HomeScreenBody extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header: Location
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Location',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on_outlined,
-                          color: Color(0xFF00BCD4),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 4),
-                        const Text(
-                          'Gulberg III, Lahore',
-                          style: TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF00BCD4),
-                          ),
-                        ),
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.grey[400],
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFF8E1), // Light yellow
-                    shape: BoxShape.circle,
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
+            InkWell(
+              onTap: _fetchLocation, // Refresh on tap
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.notifications_outlined,
-                        color: Colors.black87,
+                      const Text(
+                        'Location',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
-                      Positioned(
-                        top: 10,
-                        right: 12,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.amber,
-                            shape: BoxShape.circle,
-                            border: Border.fromBorderSide(
-                              BorderSide(color: Colors.white, width: 1.5),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_outlined,
+                            color: Color(0xFF00BCD4),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _currentAddress,
+                            style: const TextStyle(
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF00BCD4),
                             ),
                           ),
-                        ),
+                          if (_isLoadingLocation)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 8),
+                              child: SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          else
+                            Icon(
+                              Icons.keyboard_arrow_down,
+                              color: Colors.grey[400],
+                              size: 20,
+                            ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-              ],
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFF8E1), // Light yellow
+                      shape: BoxShape.circle,
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.black87,
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 12,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.amber,
+                              shape: BoxShape.circle,
+                              border: Border.fromBorderSide(
+                                BorderSide(color: Colors.white, width: 1.5),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24.0),
 
@@ -159,8 +201,21 @@ class HomeScreenBody extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: const TextField(
-                decoration: InputDecoration(
+              child: TextField(
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CategoryResultsScreen(
+                          category: 'Search', // Generic
+                          searchQuery: value,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                decoration: const InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Search service or worker...',
                   hintStyle: TextStyle(color: Colors.black45),
@@ -444,30 +499,41 @@ class HomeScreenBody extends StatelessWidget {
     Color iconColor, {
     bool isIcon = true,
   }) {
-    return Column(
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(20),
+    // Made tappable
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CategoryResultsScreen(category: label),
           ),
-          child: isIcon
-              ? Icon(icon, color: iconColor, size: 28)
-              : Container(), // For 'More' if complex, or just icon
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF1A1C18),
+        );
+      },
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: isIcon
+                ? Icon(icon, color: iconColor, size: 28)
+                : Container(), // For 'More' if complex, or just icon
           ),
-          textAlign: TextAlign.center,
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF1A1C18),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
