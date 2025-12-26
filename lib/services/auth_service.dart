@@ -44,6 +44,7 @@ class AuthService {
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         _currentUser = UserModel(
+          uid: userId,
           email: data['email'] ?? '',
           password: '', // Don't store password
           firstName: data['firstName'] ?? '',
@@ -253,6 +254,68 @@ class AuthService {
       return {'success': true};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Verify Phone Number
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required Function(String, int?) codeSent,
+    required Function(FirebaseAuthException) verificationFailed,
+    required Function(PhoneAuthCredential) verificationCompleted,
+    required Function(String) codeAutoRetrievalTimeout,
+  }) async {
+    await _firebaseAuth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: verificationCompleted,
+      verificationFailed: verificationFailed,
+      codeSent: codeSent,
+      codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+    );
+  }
+
+  // Sign in with credential (for Phone Auth)
+  Future<Map<String, dynamic>> signInWithCredential(
+    AuthCredential credential,
+  ) async {
+    try {
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
+      final user = userCredential.user;
+
+      if (user != null) {
+        // Check if user exists in Firestore, if not create basic profile
+        final doc = await _firestore.collection('users').doc(user.uid).get();
+        if (!doc.exists) {
+          await _firestore.collection('users').doc(user.uid).set({
+            'uid': user.uid,
+            'phoneNumber': user.phoneNumber,
+            'email': '',
+            'firstName': 'User', // Default
+            'lastName': '',
+            'profession': '',
+            'role': '', // Needs selection or default
+            'rating': 5.0,
+            'completedJobs': 0,
+            'monthlyEarnings': 0.0,
+            'activeJobs': 0,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+        await _loadUserFromFirestore(user.uid);
+      }
+
+      return {
+        'success': true,
+        'message': 'Sign in successful',
+        'user': _currentUser,
+      };
+    } on FirebaseAuthException catch (e) {
+      return {'success': false, 'message': e.message ?? 'Sign in failed'};
+    } catch (e) {
+      return {'success': false, 'message': 'An error occurred: $e'};
     }
   }
 }

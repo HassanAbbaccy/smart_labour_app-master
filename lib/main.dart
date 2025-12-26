@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:untitled4/screens/splash_screen.dart';
 import 'firebase_options.dart';
 import 'package:untitled4/screens/home_screen.dart';
 import 'package:untitled4/services/auth_service.dart';
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'SmartLabour Marketplace',
       theme: lightMode,
-      home: const HomeScreen(),
+      home: const SplashScreen(),
     );
   }
 }
