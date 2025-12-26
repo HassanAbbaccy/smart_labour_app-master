@@ -50,6 +50,7 @@ class AuthService {
           lastName: data['lastName'] ?? '',
           phoneNumber: data['phoneNumber'] ?? '',
           profession: data['profession'] ?? '',
+          role: data['role'],
           rating: (data['rating'] ?? 4.8).toDouble(),
           completedJobs: data['completedJobs'] ?? 0,
           monthlyEarnings: (data['monthlyEarnings'] ?? 0).toDouble(),
@@ -85,6 +86,7 @@ class AuthService {
         'lastName': lastName,
         'phoneNumber': phoneNumber,
         'profession': profession,
+        'role': '',
         'rating': 4.5,
         'completedJobs': 0,
         'monthlyEarnings': 0.0,
@@ -200,8 +202,9 @@ class AuthService {
       final updateData = <String, dynamic>{};
       if (rating != null) updateData['rating'] = rating;
       if (completedJobs != null) updateData['completedJobs'] = completedJobs;
-      if (monthlyEarnings != null)
+      if (monthlyEarnings != null) {
         updateData['monthlyEarnings'] = monthlyEarnings;
+      }
       if (activeJobs != null) updateData['activeJobs'] = activeJobs;
       updateData['updatedAt'] = FieldValue.serverTimestamp();
 
@@ -235,6 +238,21 @@ class AuthService {
       };
     } catch (e) {
       return {'success': false, 'message': 'An error occurred: $e'};
+    }
+  }
+
+  // Set user role (e.g., 'User' or 'Worker') and reload profile
+  Future<Map<String, dynamic>> setUserRole(String role) async {
+    try {
+      final userId = _firebaseAuth.currentUser!.uid;
+      await _firestore.collection('users').doc(userId).update({
+        'role': role,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      await _loadUserFromFirestore(userId);
+      return {'success': true};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 }

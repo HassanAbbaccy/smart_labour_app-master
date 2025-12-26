@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
 import '../screens/signin_screen.dart';
-import '../screens/dashboard.dart';
+import '../screens/role_selection_screen.dart';
 import '../theme/theme.dart';
 import '../widgets/custom_scaffold.dart';
 import '../services/auth_service.dart';
@@ -341,7 +341,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           const SnackBar(content: Text('Account created successfully')),
         );
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const Dashboard()),
+          MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
           (route) => false,
         );
       } else if (mounted) {

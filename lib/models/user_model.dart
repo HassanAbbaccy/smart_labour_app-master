@@ -5,6 +5,7 @@ class UserModel {
   final String lastName;
   final String phoneNumber;
   final String profession;
+  final String? role;
   final double rating;
   final int completedJobs;
   final double monthlyEarnings;
@@ -17,6 +18,7 @@ class UserModel {
     required this.lastName,
     required this.phoneNumber,
     required this.profession,
+    this.role,
     this.rating = 4.8,
     this.completedJobs = 0,
     this.monthlyEarnings = 0,
