@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -33,7 +34,7 @@ class AuthService {
         await _loadUserFromFirestore(user.uid);
       }
     } catch (e) {
-      print('Error initializing user: $e');
+      debugPrint('Error initializing user: $e');
     }
   }
 
@@ -59,7 +60,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      print('Error loading user from Firestore: $e');
+      debugPrint('Error loading user from Firestore: $e');
     }
   }
 
@@ -143,7 +144,7 @@ class AuthService {
       await _firebaseAuth.signOut();
       _currentUser = null;
     } catch (e) {
-      print('Error signing out: $e');
+      debugPrint('Error signing out: $e');
     }
   }
 
@@ -214,7 +215,7 @@ class AuthService {
       // Reload user data
       await _loadUserFromFirestore(userId);
     } catch (e) {
-      print('Error updating user stats: $e');
+      debugPrint('Error updating user stats: $e');
     }
   }
 

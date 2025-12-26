@@ -89,12 +89,22 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
 
   Future<void> _fetchLocation() async {
     setState(() => _isLoadingLocation = true);
-    final location = await LocationService().getCurrentLocation();
-    if (mounted) {
-      setState(() {
-        _currentAddress = location;
-        _isLoadingLocation = false;
-      });
+    try {
+      final location = await LocationService().getCurrentLocation();
+      if (mounted) {
+        setState(() {
+          _currentAddress = location;
+          _isLoadingLocation = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Location error: $e');
+      if (mounted) {
+        setState(() {
+          _currentAddress = 'Location Unavailable';
+          _isLoadingLocation = false;
+        });
+      }
     }
   }
 

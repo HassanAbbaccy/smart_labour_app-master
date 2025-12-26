@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:untitled4/screens/home_screen.dart';
-import 'package:untitled4/screens/jobs_screen.dart';
-import 'package:untitled4/screens/messages_screen.dart';
-import 'package:untitled4/screens/search_screen.dart';
 import 'package:untitled4/services/auth_service.dart';
 import 'package:untitled4/screens/signin_screen.dart';
 
@@ -14,7 +10,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final int _selectedIndex = 4; // Profile tab index
+  // Profile logic
 
   @override
   Widget build(BuildContext context) {
