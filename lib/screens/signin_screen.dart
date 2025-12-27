@@ -4,6 +4,7 @@ import '../screens/signup_screen.dart';
 import '../screens/forget_password_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/role_selection_screen.dart';
+import '../screens/phone_signin_screen.dart';
 import '../services/auth_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -43,9 +44,11 @@ class _SignInScreenState extends State<SignInScreen> {
                     icon: const Icon(Icons.arrow_back),
                     color: Colors.black87,
                     onPressed: () {
-                      if (Navigator.canPop(context)) {
-                        Navigator.pop(context);
-                      }
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => const PhoneSignInScreen(),
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -257,9 +260,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   width: double.infinity,
                   height: 56,
                   child: OutlinedButton(
-                    onPressed: () {
-                      // Placeholder for Google Sign In
-                    },
+                    onPressed: _isLoading ? null : _handleGoogleSignIn,
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
                         color: Colors.grey.withValues(alpha: 0.2),
@@ -274,14 +275,23 @@ class _SignInScreenState extends State<SignInScreen> {
                       children: [
                         Logo(Logos.google, size: 24),
                         const SizedBox(width: 12),
-                        const Text(
-                          'Sign in with Google',
-                          style: TextStyle(
-                            color: Color(0xFF1A1C18),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
+                        _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF1A1C18),
+                                ),
+                              )
+                            : const Text(
+                                'Sign in with Google',
+                                style: TextStyle(
+                                  color: Color(0xFF1A1C18),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                       ],
                     ),
                   ),
@@ -372,6 +382,43 @@ class _SignInScreenState extends State<SignInScreen> {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await AuthService().signInWithGoogle();
+      if (result['success'] && mounted) {
+        final user = AuthService().currentUser;
+        if (user == null || user.role == null || user.role!.isEmpty) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+            (route) => false,
+          );
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+          );
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Google Sign In failed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }

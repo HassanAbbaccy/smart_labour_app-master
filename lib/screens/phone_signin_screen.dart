@@ -4,6 +4,8 @@ import 'package:untitled4/screens/otp_screen.dart';
 import 'package:untitled4/services/auth_service.dart';
 
 import 'package:untitled4/screens/signin_screen.dart';
+import 'package:untitled4/screens/role_selection_screen.dart';
+import 'package:untitled4/screens/home_screen.dart';
 
 class PhoneSignInScreen extends StatefulWidget {
   const PhoneSignInScreen({super.key});
@@ -191,21 +193,25 @@ class _PhoneSignInScreenState extends State<PhoneSignInScreen> {
                 width: double.infinity,
                 height: 56,
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    // Placeholder for Google Auth
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Google Sign In tapped')),
-                    );
-                  },
+                  onPressed: _isLoading ? null : _handleGoogleSignIn,
                   icon: Logo(Logos.google, size: 24),
-                  label: const Text(
-                    'Google',
-                    style: TextStyle(
-                      color: Color(0xFF1A1C18),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  label: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF1A1C18),
+                          ),
+                        )
+                      : const Text(
+                          'Google',
+                          style: TextStyle(
+                            color: Color(0xFF1A1C18),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                     shape: RoundedRectangleBorder(
@@ -307,5 +313,42 @@ class _PhoneSignInScreenState extends State<PhoneSignInScreen> {
       },
       codeAutoRetrievalTimeout: (id) {},
     );
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await AuthService().signInWithGoogle();
+      if (result['success'] && mounted) {
+        final user = AuthService().currentUser;
+        if (user == null || user.role == null || user.role!.isEmpty) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
+            (route) => false,
+          );
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+          );
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Google Sign In failed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }
