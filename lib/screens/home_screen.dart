@@ -780,29 +780,46 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
   }
 
   Widget _buildTopRatedWorkers() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildWorkerCard(
-            'Muhammad K.',
-            4.9,
-            124,
-            'https://i.pravatar.cc/150?u=w1',
-            uid: 'w1',
-            profession: 'Expert Electrician',
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'Worker')
+          .orderBy('rating', descending: true)
+          .limit(10)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Text('No top-rated workers found.');
+        }
+
+        final workers = snapshot.data!.docs.map((doc) {
+          return UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        }).toList();
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: workers.map((worker) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: _buildWorkerCard(
+                  worker.fullName,
+                  worker.rating,
+                  worker.completedJobs,
+                  worker.avatarUrl ??
+                      'https://i.pravatar.cc/150?u=${worker.uid}',
+                  uid: worker.uid,
+                  profession: worker.profession,
+                ),
+              );
+            }).toList(),
           ),
-          const SizedBox(width: 16),
-          _buildWorkerCard(
-            'Bilal A.',
-            4.8,
-            98,
-            'https://i.pravatar.cc/150?u=w2',
-            uid: 'w2',
-            profession: 'Senior Plumber',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

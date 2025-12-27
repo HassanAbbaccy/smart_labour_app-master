@@ -49,5 +49,11 @@
 	<string>This app needs access to location when open to find nearby workers.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>This app needs access to location when in the background to track job progress.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your gallery to upload profile pictures.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs access to your camera to take profile pictures.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to your microphone if you choose to record videos.</string>
 </dict>
 </plist>

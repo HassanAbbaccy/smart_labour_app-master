@@ -42,21 +42,12 @@ class CategoryResultsScreen extends StatelessWidget {
 
           // Filter logic
           var workers = snapshot.data!.docs
-              .map((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                return UserModel(
-                  uid: doc.id,
-                  email: data['email'] ?? '',
-                  password: '',
-                  firstName: data['firstName'] ?? '',
-                  lastName: data['lastName'] ?? '',
-                  phoneNumber: data['phoneNumber'] ?? '',
-                  profession: data['profession'] ?? '',
-                  role: data['role'],
-                  rating: (data['rating'] ?? 0).toDouble(),
-                  completedJobs: data['completedJobs'] ?? 0,
-                );
-              })
+              .map(
+                (doc) => UserModel.fromMap(
+                  doc.data() as Map<String, dynamic>,
+                  doc.id,
+                ),
+              )
               .where((user) {
                 bool match = true;
                 // Category filter
