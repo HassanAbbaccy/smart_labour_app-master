@@ -851,6 +851,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                       'https://i.pravatar.cc/150?u=${worker.uid}',
                   uid: worker.uid,
                   profession: worker.profession,
+                  hourlyRate: worker.hourlyRate,
                 ),
               );
             }).toList(),
@@ -867,9 +868,11 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     String imageUrl, {
     String? uid,
     String? profession,
+    double? hourlyRate,
   }) {
     final workerUid = uid ?? name.hashCode.toString();
     final workerProfession = profession ?? 'Professional Worker';
+    final workerRate = hourlyRate ?? 1200.0;
 
     return InkWell(
       onTap: () {
@@ -890,20 +893,12 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                     profession: workerProfession,
                     rating: rating,
                     completedJobs: jobs,
+                    hourlyRate: workerRate,
                   ),
                 ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(
-                      scale: Tween<double>(
-                        begin: 0.95,
-                        end: 1.0,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
+                  return FadeTransition(opacity: animation, child: child);
                 },
           ),
         );
@@ -953,6 +948,15 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                       style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Rs. ${workerRate.toInt()} /visit',
+                  style: const TextStyle(
+                    color: Color(0xFF00BCD4),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),

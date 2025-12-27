@@ -206,11 +206,10 @@ class _JobCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                job.pay,
+                'Rs. ${job.pay}',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF1A1C18),
                 ),
               ),
               if (isWorker && isRequested)

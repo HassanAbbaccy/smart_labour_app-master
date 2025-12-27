@@ -17,6 +17,7 @@ class UserModel {
   final String whatsappNumber;
   final String? avatarUrl;
   final String? address;
+  final double hourlyRate;
 
   UserModel({
     required this.uid,
@@ -37,6 +38,7 @@ class UserModel {
     this.whatsappNumber = '',
     this.avatarUrl,
     this.address,
+    this.hourlyRate = 1200,
   });
 
   String get fullName => '$firstName $lastName';
@@ -61,6 +63,7 @@ class UserModel {
       whatsappNumber: map['whatsappNumber'] ?? '',
       avatarUrl: map['avatarUrl'],
       address: map['address'],
+      hourlyRate: (map['hourlyRate'] ?? 1200).toDouble(),
     );
   }
 
@@ -83,6 +86,7 @@ class UserModel {
       'whatsappNumber': whatsappNumber,
       'avatarUrl': avatarUrl,
       'address': address,
+      'hourlyRate': hourlyRate,
     };
   }
 }

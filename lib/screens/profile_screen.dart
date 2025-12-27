@@ -68,6 +68,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phoneController = TextEditingController(
       text: userData['phoneNumber'],
     );
+    final rateController = TextEditingController(
+      text: userData['hourlyRate']?.toString() ?? '1200',
+    );
     final addressController = TextEditingController(text: userData['address']);
     final skillController = TextEditingController();
     List<String> tempSkills = List<String>.from(userData['skills'] ?? []);
@@ -104,6 +107,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextField(
                   controller: phoneController,
                   decoration: const InputDecoration(labelText: 'Phone Number'),
+                ),
+                TextField(
+                  controller: rateController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Hourly Rate (PKR)',
+                    prefixText: 'Rs. ',
+                  ),
                 ),
                 if (userData['role'] == 'Worker') ...[
                   const SizedBox(height: 16),
@@ -198,6 +209,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'lastName': lastNameController.text,
                       'phoneNumber': phoneController.text,
                       'address': addressController.text,
+                      'hourlyRate':
+                          double.tryParse(rateController.text) ?? 1200.0,
                       'skills': tempSkills,
                       if (userData['role'] == 'Worker')
                         'profession': selectedProfession,

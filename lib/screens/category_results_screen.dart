@@ -187,6 +187,15 @@ class CategoryResultsScreen extends StatelessWidget {
                     worker.profession,
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rs. ${worker.hourlyRate.toInt()} /visit',
+                    style: const TextStyle(
+                      color: Color(0xFF00BCD4),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [

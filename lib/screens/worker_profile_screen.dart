@@ -46,7 +46,8 @@ class WorkerProfileScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     image: DecorationImage(
                       image: NetworkImage(
-                        'https://i.pravatar.cc/300?u=${worker.uid}',
+                        worker.avatarUrl ??
+                            'https://i.pravatar.cc/300?u=${worker.uid}',
                       ),
                       fit: BoxFit.cover,
                     ),
@@ -205,23 +206,23 @@ class WorkerProfileScreen extends StatelessWidget {
                         color: Colors.grey.withValues(alpha: 0.1),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Hourly Rate',
                               style: TextStyle(
                                 color: Colors.grey,
                                 fontSize: 13,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              '\$25 - \$40',
-                              style: TextStyle(
+                              'Rs. ${worker.hourlyRate.toInt()}',
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF009688),
