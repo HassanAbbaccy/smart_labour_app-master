@@ -11,6 +11,9 @@ class UserModel {
   final int completedJobs;
   final double monthlyEarnings;
   final int activeJobs;
+  final List<String> skills;
+  final String experience;
+  final String whatsappNumber;
 
   UserModel({
     required this.uid,
@@ -25,6 +28,9 @@ class UserModel {
     this.completedJobs = 0,
     this.monthlyEarnings = 0,
     this.activeJobs = 0,
+    this.skills = const [],
+    this.experience = '',
+    this.whatsappNumber = '',
   });
 
   String get fullName => '$firstName $lastName';

@@ -5,6 +5,8 @@ import 'package:untitled4/screens/search_screen.dart';
 import 'package:untitled4/screens/profile_screen.dart';
 import 'package:untitled4/services/location_service.dart';
 import 'package:untitled4/screens/category_results_screen.dart';
+import 'package:untitled4/screens/worker_profile_screen.dart';
+import 'package:untitled4/models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -484,6 +486,8 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                     4.9,
                     124,
                     'https://i.pravatar.cc/150?u=w1',
+                    uid: 'w1',
+                    profession: 'Expert Electrician',
                   ),
                   const SizedBox(width: 16),
                   _buildWorkerCard(
@@ -491,6 +495,8 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                     4.8,
                     98,
                     'https://i.pravatar.cc/150?u=w2',
+                    uid: 'w2',
+                    profession: 'Senior Plumber',
                   ),
                 ],
               ),
@@ -551,54 +557,100 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     String name,
     double rating,
     int jobs,
-    String imageUrl,
-  ) {
-    return Container(
-      width: 250,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              image: DecorationImage(
-                image: NetworkImage(imageUrl),
-                fit: BoxFit.cover,
-              ),
-            ),
+    String imageUrl, {
+    String? uid,
+    String? profession,
+  }) {
+    final workerUid = uid ?? name.hashCode.toString();
+    final workerProfession = profession ?? 'Professional Worker';
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                WorkerProfileScreen(
+                  worker: UserModel(
+                    uid: workerUid,
+                    firstName: name.split(' ')[0],
+                    lastName: name.split(' ').length > 1
+                        ? name.split(' ')[1]
+                        : '',
+                    email: '',
+                    password: '',
+                    phoneNumber: '',
+                    profession: workerProfession,
+                    rating: rating,
+                    completedJobs: jobs,
+                  ),
+                ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(
+                        begin: 0.95,
+                        end: 1.0,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+        );
+      },
+      child: Container(
+        width: 250,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Hero(
+              tag: 'worker_image_$workerUid',
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.star_border, size: 16, color: Colors.orange),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$rating ($jobs jobs)',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
-                ],
-              ),
-            ],
-          ),
-        ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.star, size: 16, color: Colors.orange),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$rating ($jobs jobs)',
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
