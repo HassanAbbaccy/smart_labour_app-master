@@ -1,3 +1,4 @@
+import 'package:untitled4/screens/payment_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:untitled4/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -156,7 +157,7 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
     Navigator.pop(context); // Close dialog
 
     try {
-      await FirebaseFirestore.instance.collection('jobs').add({
+      final docRef = await FirebaseFirestore.instance.collection('jobs').add({
         'title': '${widget.worker.profession} Service',
         'location': (currentUser.address ?? '').isEmpty
             ? 'Gulberg, Lahore'
@@ -167,23 +168,22 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
         'workerName': widget.worker.fullName,
         'workerAvatarUrl': widget.worker.avatarUrl,
         'status': 'REQUESTED',
+        'paymentStatus': 'PENDING',
         'createdAt': FieldValue.serverTimestamp(),
         'description': 'Direct hire from professional profile.',
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Job request sent to ${widget.worker.fullName}!'),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'TRACK',
-              textColor: Colors.white,
-              onPressed: () => Navigator.pop(context),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentScreen(
+              jobId: docRef.id,
+              amount: 'Rs. ${widget.worker.hourlyRate.toInt()}',
+              workerName: widget.worker.fullName,
             ),
           ),
         );
-        Navigator.pop(context); // Back to Home
       }
     } catch (e) {
       if (mounted) {

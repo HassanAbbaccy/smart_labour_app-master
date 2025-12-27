@@ -17,6 +17,9 @@ class JobModel {
   final String? workerId;
   final String? clientId;
 
+  final String? paymentStatus; // 'PENDING', 'PAID'
+  final String? paymentMethod; // 'EasyPaisa', 'JazzCash', 'Bank'
+
   JobModel({
     required this.id,
     required this.title,
@@ -33,6 +36,8 @@ class JobModel {
     this.maxPrice,
     this.workerId,
     this.clientId,
+    this.paymentStatus = 'PENDING',
+    this.paymentMethod,
   });
 
   factory JobModel.fromDoc(DocumentSnapshot doc) {
@@ -56,6 +61,8 @@ class JobModel {
       maxPrice: data['maxPrice'],
       workerId: data['workerId'],
       clientId: data['clientId'],
+      paymentStatus: data['paymentStatus'] ?? 'PENDING',
+      paymentMethod: data['paymentMethod'],
     );
   }
 
@@ -74,5 +81,7 @@ class JobModel {
     'maxPrice': maxPrice,
     'workerId': workerId,
     'clientId': clientId,
+    'paymentStatus': paymentStatus,
+    'paymentMethod': paymentMethod,
   };
 }
