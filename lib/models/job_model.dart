@@ -11,9 +11,11 @@ class JobModel {
   final String? workerName;
   final String? workerAvatarUrl;
   final int? workersOffered;
-  final String? jobIconUrl; // Path to asset or network url
+  final String? jobIconUrl;
   final bool isRangePrice;
   final String? maxPrice;
+  final String? workerId;
+  final String? clientId;
 
   JobModel({
     required this.id,
@@ -29,6 +31,8 @@ class JobModel {
     this.jobIconUrl,
     this.isRangePrice = false,
     this.maxPrice,
+    this.workerId,
+    this.clientId,
   });
 
   factory JobModel.fromDoc(DocumentSnapshot doc) {
@@ -50,6 +54,8 @@ class JobModel {
       jobIconUrl: data['jobIconUrl'],
       isRangePrice: data['isRangePrice'] ?? false,
       maxPrice: data['maxPrice'],
+      workerId: data['workerId'],
+      clientId: data['clientId'],
     );
   }
 
@@ -66,5 +72,7 @@ class JobModel {
     'jobIconUrl': jobIconUrl,
     'isRangePrice': isRangePrice,
     'maxPrice': maxPrice,
+    'workerId': workerId,
+    'clientId': clientId,
   };
 }

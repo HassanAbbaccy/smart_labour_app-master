@@ -21,27 +21,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phoneController = TextEditingController(
       text: userData['phoneNumber'],
     );
+    String? selectedProfession = userData['profession'];
+
+    final List<String> occupations = [
+      'Electrician',
+      'Plumber',
+      'Carpenter',
+      'Painter',
+      'Labour',
+      'Cleaner',
+      'Moving',
+    ];
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Edit Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: firstNameController,
-              decoration: const InputDecoration(labelText: 'First Name'),
-            ),
-            TextField(
-              controller: lastNameController,
-              decoration: const InputDecoration(labelText: 'Last Name'),
-            ),
-            TextField(
-              controller: phoneController,
-              decoration: const InputDecoration(labelText: 'Phone Number'),
-            ),
-          ],
+        content: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: firstNameController,
+                  decoration: const InputDecoration(labelText: 'First Name'),
+                ),
+                TextField(
+                  controller: lastNameController,
+                  decoration: const InputDecoration(labelText: 'Last Name'),
+                ),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(labelText: 'Phone Number'),
+                ),
+                if (userData['role'] == 'Worker') ...[
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: occupations.contains(selectedProfession)
+                        ? selectedProfession
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Professional Category',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: occupations.map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setDialogState(() {
+                        selectedProfession = newValue;
+                      });
+                    },
+                  ),
+                ],
+              ],
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -59,6 +97,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'firstName': firstNameController.text,
                       'lastName': lastNameController.text,
                       'phoneNumber': phoneController.text,
+                      if (userData['role'] == 'Worker')
+                        'profession': selectedProfession,
                     });
               }
               if (context.mounted) Navigator.pop(context);

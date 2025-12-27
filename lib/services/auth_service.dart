@@ -28,6 +28,18 @@ class AuthService {
   // Get current Firebase user
   User? get firebaseUser => _firebaseAuth.currentUser;
 
+  // Stream of user data
+  Stream<UserModel?> get userStream {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return Stream.value(null);
+    return _firestore.collection('users').doc(user.uid).snapshots().map((
+      snapshot,
+    ) {
+      if (!snapshot.exists) return null;
+      return UserModel.fromMap(snapshot.data()!, snapshot.id);
+    });
+  }
+
   // Initialize user from Firebase
   Future<void> initializeUser() async {
     try {
@@ -45,21 +57,7 @@ class AuthService {
     try {
       final doc = await _firestore.collection('users').doc(userId).get();
       if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        _currentUser = UserModel(
-          uid: userId,
-          email: data['email'] ?? '',
-          password: '', // Don't store password
-          firstName: data['firstName'] ?? '',
-          lastName: data['lastName'] ?? '',
-          phoneNumber: data['phoneNumber'] ?? '',
-          profession: data['profession'] ?? '',
-          role: data['role'],
-          rating: (data['rating'] ?? 4.8).toDouble(),
-          completedJobs: data['completedJobs'] ?? 0,
-          monthlyEarnings: (data['monthlyEarnings'] ?? 0).toDouble(),
-          activeJobs: data['activeJobs'] ?? 0,
-        );
+        _currentUser = UserModel.fromMap(doc.data()!, doc.id);
       }
     } catch (e) {
       debugPrint('Error loading user from Firestore: $e');
@@ -246,13 +244,20 @@ class AuthService {
   }
 
   // Set user role (e.g., 'User' or 'Worker') and reload profile
-  Future<Map<String, dynamic>> setUserRole(String role) async {
+  Future<Map<String, dynamic>> setUserRole(
+    String role, {
+    String? profession,
+  }) async {
     try {
       final userId = _firebaseAuth.currentUser!.uid;
-      await _firestore.collection('users').doc(userId).update({
+      final updateData = <String, dynamic>{
         'role': role,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+      if (profession != null) {
+        updateData['profession'] = profession;
+      }
+      await _firestore.collection('users').doc(userId).update(updateData);
       await _loadUserFromFirestore(userId);
       return {'success': true};
     } catch (e) {

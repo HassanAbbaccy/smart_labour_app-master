@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:untitled4/screens/jobs_screen.dart';
-import 'package:untitled4/screens/messages_screen.dart';
-import 'package:untitled4/screens/search_screen.dart';
-import 'package:untitled4/screens/profile_screen.dart';
-import 'package:untitled4/services/location_service.dart';
-import 'package:untitled4/screens/category_results_screen.dart';
-import 'package:untitled4/screens/worker_profile_screen.dart';
-import 'package:untitled4/models/user_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/job_model.dart';
+import '../models/user_model.dart';
+import '../services/auth_service.dart';
+import '../services/location_service.dart';
+import 'category_results_screen.dart';
+import 'worker_profile_screen.dart';
+import 'jobs_screen.dart';
+import 'messages_screen.dart';
+import 'search_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -80,7 +83,7 @@ class HomeScreenBody extends StatefulWidget {
 }
 
 class _HomeScreenBodyState extends State<HomeScreenBody> {
-  String _currentAddress = 'Gulberg III, Lahore'; // Default/Fallback
+  String _currentAddress = 'Gulberg III, Lahore';
   bool _isLoadingLocation = false;
 
   @override
@@ -112,6 +115,259 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
 
   @override
   Widget build(BuildContext context) {
+    return StreamBuilder<UserModel?>(
+      stream: AuthService().userStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final user = snapshot.data;
+        if (user == null) {
+          return const Center(child: Text('Please sign in'));
+        }
+
+        if (user.role == 'Worker') {
+          return _buildWorkerDashboard(user);
+        } else {
+          return _buildClientDashboard(user);
+        }
+      },
+    );
+  }
+
+  Widget _buildWorkerDashboard(UserModel user) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome back,',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                  Text(
+                    user.firstName,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1C18),
+                    ),
+                  ),
+                ],
+              ),
+              const CircleAvatar(
+                radius: 24,
+                backgroundImage: NetworkImage(
+                  'https://i.pravatar.cc/150?u=worker',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Stats Cards
+          Row(
+            children: [
+              _buildStatCard(
+                'Earnings',
+                'PKR ${user.monthlyEarnings}',
+                Icons.payments_outlined,
+                Colors.green,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Jobs',
+                '${user.completedJobs}',
+                Icons.work_outline,
+                Colors.blue,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                'Rating',
+                '${user.rating}',
+                Icons.star_outline,
+                Colors.orange,
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // Active Job / Incoming Requests
+          const Text(
+            'Job Invitations',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('jobs')
+                .where('workerId', isEqualTo: user.uid)
+                .where('status', isEqualTo: 'REQUESTED')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return _buildEmptyState('No new invitations at the moment.');
+              }
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: snapshot.data!.docs.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final job = JobModel.fromDoc(snapshot.data!.docs[index]);
+                  return _buildRequestCard(job);
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequestCard(JobModel job) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2F1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.handyman_outlined,
+                  color: Color(0xFF009688),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      job.location,
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                job.pay,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF009688),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {},
+                  child: const Text('Decline'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await FirebaseFirestore.instance
+                        .collection('jobs')
+                        .doc(job.id)
+                        .update({'status': 'IN PROGRESS'});
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF009688),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Accept'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            Text(
+              title,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Colors.grey[600]),
+      ),
+    );
+  }
+
+  Widget _buildClientDashboard(UserModel user) {
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
@@ -120,7 +376,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
           children: [
             // Header: Location
             InkWell(
-              onTap: _fetchLocation, // Refresh on tap
+              onTap: _fetchLocation,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -169,302 +425,26 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                       ),
                     ],
                   ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFF8E1), // Light yellow
-                      shape: BoxShape.circle,
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.black87,
-                        ),
-                        Positioned(
-                          top: 10,
-                          right: 12,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.amber,
-                              shape: BoxShape.circle,
-                              border: Border.fromBorderSide(
-                                BorderSide(color: Colors.white, width: 1.5),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildNotificationIcon(),
                 ],
               ),
             ),
             const SizedBox(height: 24.0),
 
             // Search Bar
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF8E1), // Light cream
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: TextField(
-                onSubmitted: (value) {
-                  if (value.isNotEmpty) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CategoryResultsScreen(
-                          category: 'Search', // Generic
-                          searchQuery: value,
-                        ),
-                      ),
-                    );
-                  }
-                },
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Search service or worker...',
-                  hintStyle: TextStyle(color: Colors.black45),
-                  icon: Icon(Icons.search, color: Colors.black45),
-                ),
-              ),
-            ),
+            _buildSearchBar(),
             const SizedBox(height: 24.0),
 
             // Recent Activity
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Recent Activity',
-                  style: TextStyle(
-                    fontSize: 20.0,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1C18),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'History',
-                    style: TextStyle(color: Color(0xFF00BCD4)),
-                  ),
-                ),
-              ],
-            ),
+            _buildSectionHeader('Recent Activity', actionLabel: 'History'),
             const SizedBox(height: 8),
-
-            // Activity Card
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE3F2FD),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.flash_on_outlined,
-                          color: Color(0xFF1976D2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Electrician Repair',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFF8E1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Text(
-                                    'In Progress',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.brown,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Today, 10:30 AM',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Divider(color: Colors.grey[200]),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const CircleAvatar(
-                            radius: 16,
-                            backgroundImage: NetworkImage(
-                              'https://i.pravatar.cc/150?u=a',
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Ahmed R.',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00BCD4),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                        ),
-                        child: const Text('Track Job'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            _buildRecentActivityCard(),
             const SizedBox(height: 24.0),
 
             // Categories
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Categories',
-                  style: TextStyle(
-                    fontSize: 20.0,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1C18),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'See All',
-                    style: TextStyle(color: Color(0xFF00BCD4)),
-                  ),
-                ),
-              ],
-            ),
+            _buildSectionHeader('Categories', actionLabel: 'See All'),
             const SizedBox(height: 16),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 4,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 8,
-              childAspectRatio: 0.8,
-              children: [
-                _buildCategoryItem(
-                  'Electrician',
-                  Icons.flash_on_outlined,
-                  const Color(0xFFE3F2FD),
-                  const Color(0xFF1976D2),
-                ),
-                _buildCategoryItem(
-                  'Plumber',
-                  Icons.water_drop_outlined,
-                  const Color(0xFFE8F5E9),
-                  const Color(0xFF2E7D32),
-                ),
-                _buildCategoryItem(
-                  'Carpenter',
-                  Icons.chair_outlined, // Approximate
-                  const Color(0xFFFFF3E0),
-                  const Color(0xFFEF6C00),
-                ),
-                _buildCategoryItem(
-                  'Painter',
-                  Icons.format_paint_outlined,
-                  const Color(0xFFF3E5F5),
-                  const Color(0xFF7B1FA2),
-                ),
-                _buildCategoryItem(
-                  'Labour',
-                  Icons.build_outlined,
-                  const Color(0xFFFAFAFA),
-                  Colors.grey[700]!,
-                ),
-                _buildCategoryItem(
-                  'Cleaner',
-                  Icons.cleaning_services_outlined,
-                  const Color(0xFFFAFAFA),
-                  Colors.grey[700]!,
-                ),
-                _buildCategoryItem(
-                  'Moving',
-                  Icons.local_shipping_outlined,
-                  const Color(0xFFFAFAFA),
-                  Colors.grey[700]!,
-                ),
-                _buildCategoryItem(
-                  'More',
-                  Icons.grid_view,
-                  const Color(0xFFFAFAFA),
-                  Colors.grey[700]!,
-                  isIcon: false,
-                ),
-              ],
-            ),
+            _buildCategoriesGrid(),
             const SizedBox(height: 24.0),
 
             // Top Rated Workers
@@ -477,34 +457,281 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               ),
             ),
             const SizedBox(height: 16.0),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildWorkerCard(
-                    'Muhammad K.',
-                    4.9,
-                    124,
-                    'https://i.pravatar.cc/150?u=w1',
-                    uid: 'w1',
-                    profession: 'Expert Electrician',
-                  ),
-                  const SizedBox(width: 16),
-                  _buildWorkerCard(
-                    'Bilal A.',
-                    4.8,
-                    98,
-                    'https://i.pravatar.cc/150?u=w2',
-                    uid: 'w2',
-                    profession: 'Senior Plumber',
-                  ),
-                ],
-              ),
-            ),
+            _buildTopRatedWorkers(),
             const SizedBox(height: 80),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildNotificationIcon() {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFF8E1),
+        shape: BoxShape.circle,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Icon(Icons.notifications_outlined, color: Colors.black87),
+          Positioned(
+            top: 10,
+            right: 12,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.amber,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: TextField(
+        onSubmitted: (value) {
+          if (value.isNotEmpty) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CategoryResultsScreen(
+                  category: 'Search',
+                  searchQuery: value,
+                ),
+              ),
+            );
+          }
+        },
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          hintText: 'Search service or worker...',
+          hintStyle: TextStyle(color: Colors.black45),
+          icon: Icon(Icons.search, color: Colors.black45),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, {String? actionLabel}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20.0,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1A1C18),
+          ),
+        ),
+        if (actionLabel != null)
+          TextButton(
+            onPressed: () {},
+            child: Text(
+              actionLabel,
+              style: const TextStyle(color: Color(0xFF00BCD4)),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRecentActivityCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE3F2FD),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.flash_on_outlined,
+                  color: Color(0xFF1976D2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Electrician Repair',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        _buildStatusBadge(
+                          'In Progress',
+                          Colors.brown,
+                          const Color(0xFFFFF8E1),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Today, 10:30 AM',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(color: Colors.grey[200]),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(
+                      'https://i.pravatar.cc/150?u=a',
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Ahmed R.',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                ],
+              ),
+              ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00BCD4),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                ),
+                child: const Text('Track Job'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String text, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoriesGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 4,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 8,
+      childAspectRatio: 0.8,
+      children: [
+        _buildCategoryItem(
+          'Electrician',
+          Icons.flash_on_outlined,
+          const Color(0xFFE3F2FD),
+          const Color(0xFF1976D2),
+        ),
+        _buildCategoryItem(
+          'Plumber',
+          Icons.water_drop_outlined,
+          const Color(0xFFE8F5E9),
+          const Color(0xFF2E7D32),
+        ),
+        _buildCategoryItem(
+          'Carpenter',
+          Icons.chair_outlined,
+          const Color(0xFFFFF3E0),
+          const Color(0xFFEF6C00),
+        ),
+        _buildCategoryItem(
+          'Painter',
+          Icons.format_paint_outlined,
+          const Color(0xFFF3E5F5),
+          const Color(0xFF7B1FA2),
+        ),
+        _buildCategoryItem(
+          'Labour',
+          Icons.build_outlined,
+          const Color(0xFFFAFAFA),
+          Colors.grey[700]!,
+        ),
+        _buildCategoryItem(
+          'Cleaner',
+          Icons.cleaning_services_outlined,
+          const Color(0xFFFAFAFA),
+          Colors.grey[700]!,
+        ),
+        _buildCategoryItem(
+          'Moving',
+          Icons.local_shipping_outlined,
+          const Color(0xFFFAFAFA),
+          Colors.grey[700]!,
+        ),
+        _buildCategoryItem(
+          'More',
+          Icons.grid_view,
+          const Color(0xFFFAFAFA),
+          Colors.grey[700]!,
+          isIcon: false,
+        ),
+      ],
     );
   }
 
@@ -515,7 +742,6 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     Color iconColor, {
     bool isIcon = true,
   }) {
-    // Made tappable
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -536,7 +762,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             ),
             child: isIcon
                 ? Icon(icon, color: iconColor, size: 28)
-                : Container(), // For 'More' if complex, or just icon
+                : Container(),
           ),
           const SizedBox(height: 8),
           Text(
@@ -547,6 +773,33 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               color: Color(0xFF1A1C18),
             ),
             textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopRatedWorkers() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildWorkerCard(
+            'Muhammad K.',
+            4.9,
+            124,
+            'https://i.pravatar.cc/150?u=w1',
+            uid: 'w1',
+            profession: 'Expert Electrician',
+          ),
+          const SizedBox(width: 16),
+          _buildWorkerCard(
+            'Bilal A.',
+            4.8,
+            98,
+            'https://i.pravatar.cc/150?u=w2',
+            uid: 'w2',
+            profession: 'Senior Plumber',
           ),
         ],
       ),
