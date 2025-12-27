@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:untitled4/services/auth_service.dart';
 import 'package:untitled4/screens/signin_screen.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,6 +14,50 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isUploading = false;
+
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
+    if (image == null) return;
+
+    final uid = AuthService().firebaseUser?.uid;
+    if (uid == null) return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('avatars')
+          .child('$uid.jpg');
+      await ref.putFile(File(image.path));
+      final url = await ref.getDownloadURL();
+
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'avatarUrl': url,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
   void _showEditProfileDialog(Map<String, dynamic> userData) {
     final firstNameController = TextEditingController(
       text: userData['firstName'],
@@ -21,6 +68,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phoneController = TextEditingController(
       text: userData['phoneNumber'],
     );
+    final addressController = TextEditingController(text: userData['address']);
+    final skillController = TextEditingController();
+    List<String> tempSkills = List<String>.from(userData['skills'] ?? []);
+
     String? selectedProfession = userData['profession'];
 
     final List<String> occupations = [
@@ -77,6 +128,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                 ],
+                const SizedBox(height: 16),
+                TextField(
+                  controller: addressController,
+                  decoration: const InputDecoration(labelText: 'Address'),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Skills',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: tempSkills
+                      .map(
+                        (skill) => Chip(
+                          label: Text(skill),
+                          onDeleted: () {
+                            setDialogState(() {
+                              tempSkills.remove(skill);
+                            });
+                          },
+                        ),
+                      )
+                      .toList(),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: skillController,
+                        decoration: const InputDecoration(
+                          hintText: 'Add skill',
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () {
+                        if (skillController.text.isNotEmpty) {
+                          setDialogState(() {
+                            tempSkills.add(skillController.text.trim());
+                            skillController.clear();
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ],
             );
           },
@@ -97,6 +197,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'firstName': firstNameController.text,
                       'lastName': lastNameController.text,
                       'phoneNumber': phoneController.text,
+                      'address': addressController.text,
+                      'skills': tempSkills,
                       if (userData['role'] == 'Worker')
                         'profession': selectedProfession,
                     });
@@ -149,12 +251,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Header
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 35,
-                              backgroundImage: const NetworkImage(
-                                'https://i.pravatar.cc/150?u=profile',
-                              ),
-                              backgroundColor: Colors.grey[200],
+                            Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 35,
+                                  backgroundImage: userData['avatarUrl'] != null
+                                      ? NetworkImage(userData['avatarUrl'])
+                                      : const NetworkImage(
+                                          'https://i.pravatar.cc/150?u=profile',
+                                        ),
+                                  backgroundColor: Colors.grey[200],
+                                ),
+                                if (_isUploading)
+                                  const Positioned.fill(
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: GestureDetector(
+                                    onTap: _isUploading
+                                        ? null
+                                        : _pickAndUploadImage,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF00BCD4),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.camera_alt,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(width: 16),
                             Column(
@@ -176,6 +313,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     color: Colors.grey,
                                   ),
                                 ),
+                                if (userData['address'] != null &&
+                                    userData['address'].isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    userData['address'],
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 4),
                                 GestureDetector(
                                   onTap: () => _showEditProfileDialog(userData),
@@ -281,6 +429,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
+
+                        // Skills Section
+                        if (userData['skills'] != null &&
+                            (userData['skills'] as List).isNotEmpty) ...[
+                          const Text(
+                            'Professional Skills',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A1C18),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: (userData['skills'] as List)
+                                .map(
+                                  (skill) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF00BCD4,
+                                      ).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: const Color(
+                                          0xFF00BCD4,
+                                        ).withValues(alpha: 0.2),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      skill.toString(),
+                                      style: const TextStyle(
+                                        color: Color(0xFF009688),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
 
                         // Menu Items
                         _buildMenuItem(

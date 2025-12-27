@@ -15,6 +15,8 @@ class UserModel {
   final List<String> skills;
   final String experience;
   final String whatsappNumber;
+  final String? avatarUrl;
+  final String? address;
 
   UserModel({
     required this.uid,
@@ -33,6 +35,8 @@ class UserModel {
     this.skills = const [],
     this.experience = '',
     this.whatsappNumber = '',
+    this.avatarUrl,
+    this.address,
   });
 
   String get fullName => '$firstName $lastName';
@@ -55,6 +59,8 @@ class UserModel {
       skills: List<String>.from(map['skills'] ?? []),
       experience: map['experience'] ?? '',
       whatsappNumber: map['whatsappNumber'] ?? '',
+      avatarUrl: map['avatarUrl'],
+      address: map['address'],
     );
   }
 
@@ -75,6 +81,8 @@ class UserModel {
       'skills': skills,
       'experience': experience,
       'whatsappNumber': whatsappNumber,
+      'avatarUrl': avatarUrl,
+      'address': address,
     };
   }
 }
