@@ -4,29 +4,27 @@ class MessageModel {
   final String id;
   final String text;
   final String senderId;
-  final DateTime sentAt;
+  final DateTime timestamp;
   final bool isRead;
 
   MessageModel({
     required this.id,
     required this.text,
     required this.senderId,
-    required this.sentAt,
+    required this.timestamp,
     this.isRead = false,
   });
 
   factory MessageModel.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    final ts =
-        data['sentAt'] ??
-        data['timestamp']; // Support both for safety during migration
-    DateTime sent = DateTime.now();
-    if (ts is Timestamp) sent = ts.toDate();
+    final ts = data['timestamp'] ?? data['sentAt'];
+    DateTime time = DateTime.now();
+    if (ts is Timestamp) time = ts.toDate();
     return MessageModel(
       id: doc.id,
       text: data['text'] ?? '',
       senderId: data['senderId'] ?? '',
-      sentAt: sent,
+      timestamp: time,
       isRead: data['isRead'] ?? false,
     );
   }
@@ -34,7 +32,7 @@ class MessageModel {
   Map<String, dynamic> toMap() => {
     'text': text,
     'senderId': senderId,
-    'sentAt': FieldValue.serverTimestamp(),
+    'timestamp': FieldValue.serverTimestamp(),
     'isRead': isRead,
   };
 }

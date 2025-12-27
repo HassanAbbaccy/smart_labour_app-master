@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/message_model.dart';
 
 class MessageService {
@@ -17,23 +18,30 @@ class MessageService {
   }) async {
     final chatId = getConversationId(currentUserId, peerId);
     final docRef = _firestore.collection('chats').doc(chatId);
-    final doc = await docRef.get();
 
-    if (!doc.exists) {
-      await docRef.set({
-        'participants': [currentUserId, peerId],
-        'names': {currentUserId: 'You', peerId: peerName},
-        'lastMessage': '',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'unreadCount': 0,
-        'participantData': {
-          // Store minimal data for the list view
-          currentUserId: {'name': 'User', 'role': 'Client'},
-          peerId: {'name': peerName, 'role': 'Worker'},
-        },
-      });
+    try {
+      final doc = await docRef.get();
+
+      if (!doc.exists) {
+        await docRef.set({
+          'participants': [currentUserId, peerId],
+          'names': {currentUserId: 'You', peerId: peerName},
+          'lastMessage': '',
+          'lastMessageTime': FieldValue.serverTimestamp(),
+          'unreadCount': 0,
+          'participantData': {
+            currentUserId: {'name': 'User', 'role': 'Client'},
+            peerId: {'name': peerName, 'role': 'Worker'},
+          },
+        });
+      }
+      return chatId;
+    } catch (e) {
+      debugPrint(
+        '[MessageService] Firestore Error in getOrCreateConversation: $e',
+      );
+      rethrow;
     }
-    return chatId;
   }
 
   Stream<List<Map<String, dynamic>>> streamUserConversations(String userId) {
@@ -65,7 +73,7 @@ class MessageService {
         .collection('chats')
         .doc(conversationId)
         .collection('messages')
-        .orderBy('sentAt', descending: true)
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snap) => snap.docs.map((d) => MessageModel.fromDoc(d)).toList());
   }

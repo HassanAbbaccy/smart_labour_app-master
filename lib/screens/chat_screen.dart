@@ -34,7 +34,7 @@ class _ChatScreenState extends State<ChatScreen> {
       id: '',
       text: text,
       senderId: userId,
-      sentAt: DateTime.now(),
+      timestamp: DateTime.now(),
     );
 
     _controller.clear();
@@ -103,6 +103,18 @@ class _ChatScreenState extends State<ChatScreen> {
             child: StreamBuilder<List<MessageModel>>(
               stream: _service.streamMessages(widget.conversationId),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        'Error loading chats: ${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  );
+                }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
@@ -175,7 +187,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    DateFormat('hh:mm a').format(m.sentAt),
+                    DateFormat('hh:mm a').format(m.timestamp),
                     style: TextStyle(
                       color: isMe ? Colors.white70 : Colors.black38,
                       fontSize: 10,
