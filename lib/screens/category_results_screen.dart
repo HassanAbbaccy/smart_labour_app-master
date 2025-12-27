@@ -74,7 +74,8 @@ class CategoryResultsScreen extends StatelessWidget {
                   final query = searchQuery!.toLowerCase();
                   match =
                       user.fullName.toLowerCase().contains(query) ||
-                      user.profession.toLowerCase().contains(query);
+                      user.profession.toLowerCase().contains(query) ||
+                      user.skills.any((s) => s.toLowerCase().contains(query));
                 }
 
                 return match;
