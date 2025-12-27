@@ -438,10 +438,36 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             const SizedBox(height: 24.0),
 
             // Recent Activity
-            _buildSectionHeader('Recent Activity', actionLabel: 'History'),
-            const SizedBox(height: 8),
-            _buildRecentActivityCard(),
-            const SizedBox(height: 24.0),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('jobs')
+                  .where('clientId', isEqualTo: user.uid)
+                  .orderBy('createdAt', descending: true)
+                  .limit(1)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                final job = JobModel.fromDoc(snapshot.data!.docs.first);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(
+                      'Recent Activity',
+                      actionLabel: 'History',
+                      onTap: () {
+                        // Navigate to Jobs tab or history
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _buildRecentActivityCard(job),
+                    const SizedBox(height: 24.0),
+                  ],
+                );
+              },
+            ),
 
             // Categories
             _buildSectionHeader(
@@ -573,7 +599,11 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     );
   }
 
-  Widget _buildRecentActivityCard() {
+  Widget _buildRecentActivityCard(JobModel job) {
+    final timeStr = job.createdAt != null
+        ? '${job.createdAt!.hour}:${job.createdAt!.minute.toString().padLeft(2, '0')} ${job.createdAt!.hour >= 12 ? 'PM' : 'AM'}'
+        : 'Recently';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -613,24 +643,32 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Electrician Repair',
-                          style: TextStyle(
+                        Text(
+                          job.title,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         _buildStatusBadge(
-                          'In Progress',
-                          Colors.brown,
-                          const Color(0xFFFFF8E1),
+                          job.status ?? 'Pending',
+                          job.status == 'COMPLETED'
+                              ? Colors.green
+                              : job.status == 'IN PROGRESS'
+                              ? Colors.brown
+                              : Colors.blueGrey,
+                          job.status == 'COMPLETED'
+                              ? const Color(0xFFE8F5E9)
+                              : job.status == 'IN PROGRESS'
+                              ? const Color(0xFFFFF8E1)
+                              : Colors.grey[100]!,
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Today, 10:30 AM',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    Text(
+                      '${job.createdAt != null ? "Today, " : ""}$timeStr',
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                   ],
                 ),
@@ -643,23 +681,27 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+              Row(
                 children: [
                   CircleAvatar(
                     radius: 16,
                     backgroundImage: NetworkImage(
-                      'https://i.pravatar.cc/150?u=a',
+                      job.workerAvatarUrl ??
+                          'https://i.pravatar.cc/150?u=${job.workerId}',
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
-                    'Ahmed R.',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    job.workerName ?? 'Searching...',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () => _showTrackJobModal(job),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00BCD4),
                   foregroundColor: Colors.white,
@@ -672,6 +714,240 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                 child: const Text('Track Job'),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTrackJobModal(JobModel job) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          builder: (_, controller) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Track Job',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      controller: controller,
+                      padding: const EdgeInsets.all(24),
+                      children: [
+                        // Worker Info
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAF3),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundImage: NetworkImage(
+                                  job.workerAvatarUrl ??
+                                      'https://i.pravatar.cc/150?u=${job.workerId}',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      job.workerName ?? 'Assigning Worker...',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18,
+                                      ),
+                                    ),
+                                    Text(
+                                      job.status == 'REQUESTED'
+                                          ? 'Looking for nearby workers'
+                                          : 'Professional is on the way',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF00BCD4),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.phone,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Timeline
+                        _buildTimelineStep(
+                          'Job Posted',
+                          job.createdAt != null
+                              ? 'Confirmed at ${job.createdAt!.hour}:${job.createdAt!.minute.toString().padLeft(2, '0')}'
+                              : 'Pending',
+                          true,
+                          true,
+                        ),
+                        _buildTimelineStep(
+                          'Worker Assigned',
+                          job.workerId != null
+                              ? 'Professional assigned'
+                              : 'Finding best worker...',
+                          job.workerId != null,
+                          job.status != 'REQUESTED',
+                        ),
+                        _buildTimelineStep(
+                          'In Transit',
+                          job.status == 'IN PROGRESS'
+                              ? 'Professional is arriving'
+                              : 'Waiting for worker',
+                          job.status == 'IN PROGRESS',
+                          job.status == 'IN PROGRESS',
+                        ),
+                        _buildTimelineStep(
+                          'Work Started',
+                          job.status == 'IN PROGRESS'
+                              ? 'In progress'
+                              : 'Not started',
+                          job.status == 'IN PROGRESS',
+                          job.status == 'COMPLETED',
+                        ),
+                        _buildTimelineStep(
+                          'Completed',
+                          job.status == 'COMPLETED'
+                              ? 'Job finished'
+                              : 'Pending completion',
+                          job.status == 'COMPLETED',
+                          false,
+                          isLast: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTimelineStep(
+    String title,
+    String subtitle,
+    bool isCompleted,
+    bool isActive, {
+    bool isLast = false,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: isCompleted ? const Color(0xFF009688) : Colors.white,
+                  border: Border.all(
+                    color: isCompleted
+                        ? const Color(0xFF009688)
+                        : Colors.grey[300]!,
+                    width: 2,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: isCompleted
+                    ? const Icon(Icons.check, size: 12, color: Colors.white)
+                    : null,
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: isCompleted
+                        ? const Color(0xFF009688)
+                        : Colors.grey[300],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isActive || isCompleted
+                        ? Colors.black
+                        : Colors.grey[400],
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
+                if (!isLast) const SizedBox(height: 24),
+              ],
+            ),
           ),
         ],
       ),
@@ -928,37 +1204,62 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               ),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.star, size: 16, color: Colors.orange),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$rating ($jobs jobs)',
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (rating >= 4.5)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2F1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'TOP RATED',
+                        style: TextStyle(
+                          color: Color(0xFF009688),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Rs. ${workerRate.toInt()} /visit',
-                  style: const TextStyle(
-                    color: Color(0xFF00BCD4),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, size: 16, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$rating ($jobs jobs)',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rs. ${workerRate.toInt()} /visit',
+                    style: const TextStyle(
+                      color: Color(0xFF00BCD4),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

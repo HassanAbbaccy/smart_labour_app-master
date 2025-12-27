@@ -217,8 +217,15 @@ class _SearchScreenState extends State<SearchScreen> {
                               separatorBuilder: (_, __) =>
                                   const SizedBox(width: 12),
                               itemBuilder: (context, index) {
+                                final colors = [
+                                  const Color(0xFF004D40), // Dark Green
+                                  const Color(0xFF1565C0), // Blue
+                                  const Color(0xFF4527A0), // Purple
+                                  const Color(0xFFBF360C), // Deep Orange
+                                ];
                                 return _buildFeaturedCard(
                                   featuredWorkers[index],
+                                  colors[index % colors.length],
                                 );
                               },
                             ),
@@ -261,7 +268,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildFeaturedCard(UserModel worker) {
+  Widget _buildFeaturedCard(UserModel worker, Color bgColor) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -271,7 +278,7 @@ class _SearchScreenState extends State<SearchScreen> {
         width: 240,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF004D40), // Dark green
+          color: bgColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -384,12 +391,37 @@ class _SearchScreenState extends State<SearchScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        worker.fullName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            worker.fullName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          if (worker.rating >= 4.5) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE0F2F1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'TOP RATED',
+                                style: TextStyle(
+                                  color: Color(0xFF009688),
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       Text(
                         'Rs. ${worker.hourlyRate.toInt()}',
@@ -423,7 +455,12 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                       const Spacer(),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => WorkerProfileScreen(worker: worker),
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00BCD4),
                           foregroundColor: Colors.white,

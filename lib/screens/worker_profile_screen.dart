@@ -1,15 +1,22 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:untitled4/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:untitled4/models/user_model.dart';
 import 'package:untitled4/screens/chat_screen.dart';
 
-class WorkerProfileScreen extends StatelessWidget {
+class WorkerProfileScreen extends StatefulWidget {
   final UserModel worker;
 
   const WorkerProfileScreen({super.key, required this.worker});
 
+  @override
+  State<WorkerProfileScreen> createState() => _WorkerProfileScreenState();
+}
+
+class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
   Future<void> _launchWhatsApp(BuildContext context) async {
-    final phone = worker.whatsappNumber;
+    final phone = widget.worker.whatsappNumber;
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('WhatsApp number not available')),
@@ -21,9 +28,167 @@ class WorkerProfileScreen extends StatelessWidget {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } else {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not launch WhatsApp')),
+        );
+      }
+    }
+  }
+
+  void _showHireDialog() {
+    final user = AuthService().currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to hire widget.workers')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            top: 24,
+            left: 24,
+            right: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Confirm Booking',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Hire ${widget.worker.fullName} for your project',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              _buildDialogInfoRow(
+                Icons.work_outline,
+                'Service',
+                '${widget.worker.profession} Service',
+              ),
+              const SizedBox(height: 16),
+              _buildDialogInfoRow(
+                Icons.location_on_outlined,
+                'Location',
+                (user.address ?? '').isEmpty
+                    ? 'Current Location'
+                    : user.address!,
+              ),
+              const SizedBox(height: 16),
+              _buildDialogInfoRow(
+                Icons.payments_outlined,
+                'Rate',
+                'Rs. ${widget.worker.hourlyRate.toInt()} /visit',
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _hireWorker(user),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF009688),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text(
+                    'Confirm and Hire Now',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDialogInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9FAF3),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 20, color: const Color(0xFF009688)),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _hireWorker(UserModel currentUser) async {
+    Navigator.pop(context); // Close dialog
+
+    try {
+      await FirebaseFirestore.instance.collection('jobs').add({
+        'title': '${widget.worker.profession} Service',
+        'location': (currentUser.address ?? '').isEmpty
+            ? 'Gulberg, Lahore'
+            : currentUser.address!,
+        'pay': 'Rs. ${widget.worker.hourlyRate.toInt()}',
+        'clientId': currentUser.uid,
+        'workerId': widget.worker.uid,
+        'workerName': widget.worker.fullName,
+        'workerAvatarUrl': widget.worker.avatarUrl,
+        'status': 'REQUESTED',
+        'createdAt': FieldValue.serverTimestamp(),
+        'description': 'Direct hire from professional profile.',
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Job request sent to ${widget.worker.fullName}!'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'TRACK',
+              textColor: Colors.white,
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        );
+        Navigator.pop(context); // Back to Home
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -41,13 +206,13 @@ class WorkerProfileScreen extends StatelessWidget {
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
               background: Hero(
-                tag: 'worker_image_${worker.uid}',
+                tag: 'widget.worker_image_${widget.worker.uid}',
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
                       image: NetworkImage(
-                        worker.avatarUrl ??
-                            'https://i.pravatar.cc/300?u=${worker.uid}',
+                        widget.worker.avatarUrl ??
+                            'https://i.pravatar.cc/300?u=${widget.worker.uid}',
                       ),
                       fit: BoxFit.cover,
                     ),
@@ -70,7 +235,7 @@ class WorkerProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            worker.fullName,
+                            widget.worker.fullName,
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -79,7 +244,7 @@ class WorkerProfileScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            worker.profession,
+                            widget.worker.profession,
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey[600],
@@ -105,7 +270,7 @@ class WorkerProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              worker.rating.toString(),
+                              widget.worker.rating.toString(),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.brown,
@@ -122,8 +287,11 @@ class WorkerProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatColumn('Jobs', worker.completedJobs.toString()),
-                      _buildStatColumn('Rating', '${worker.rating}'),
+                      _buildStatColumn(
+                        'Jobs',
+                        widget.worker.completedJobs.toString(),
+                      ),
+                      _buildStatColumn('Rating', '${widget.worker.rating}'),
                       _buildStatColumn('Experience', '5+ Years'), // Placeholder
                     ],
                   ),
@@ -144,9 +312,9 @@ class WorkerProfileScreen extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children:
-                        (worker.skills.isEmpty
+                        (widget.worker.skills.isEmpty
                                 ? ['Plumbing', 'Pipe Repair', 'Maintenance']
-                                : worker.skills)
+                                : widget.worker.skills)
                             .map(
                               (skill) => Chip(
                                 label: Text(skill),
@@ -175,9 +343,9 @@ class WorkerProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    worker.experience.isEmpty
-                        ? 'Professional ${worker.profession} with over 5 years of experience in residential and commercial projects. Known for punctuality and high-quality work.'
-                        : worker.experience,
+                    widget.worker.experience.isEmpty
+                        ? 'Professional ${widget.worker.profession} with over 5 years of experience in residential and commercial projects. Known for punctuality and high-quality work.'
+                        : widget.worker.experience,
                     style: TextStyle(
                       fontSize: 15,
                       color: Colors.grey[700],
@@ -221,7 +389,7 @@ class WorkerProfileScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Rs. ${worker.hourlyRate.toInt()}',
+                              'Rs. ${widget.worker.hourlyRate.toInt()}',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -262,7 +430,7 @@ class WorkerProfileScreen extends StatelessWidget {
         ],
       ),
       bottomSheet: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
@@ -273,53 +441,82 @@ class WorkerProfileScreen extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // WhatsApp Button
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _launchWhatsApp(context),
-                icon: const Icon(Icons.message, color: Colors.green),
-                label: const Text('WhatsApp'),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _showHireDialog,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE8F5E9),
-                  foregroundColor: Colors.green[800],
-                  elevation: 0,
+                  backgroundColor: const Color(0xFF009688),
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
+                ),
+                child: const Text(
+                  'Hire Now',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
-            const SizedBox(width: 16),
-            // Chat Button
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatScreen(
-                        peerName: worker.fullName,
-                        conversationId:
-                            'mock_conv_${worker.uid}', // In real app, fetch or create ID
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                // WhatsApp Button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _launchWhatsApp(context),
+                    icon: const Icon(
+                      Icons.message,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                    label: const Text('WhatsApp'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE8F5E9),
+                      foregroundColor: Colors.green[800],
+                      elevation: 0,
+                      minimumSize: const Size(double.infinity, 44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.chat_bubble_outline),
-                label: const Text('Direct Chat'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00BCD4),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                // Chat Button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            peerName: widget.worker.fullName,
+                            conversationId: 'mock_conv_${widget.worker.uid}',
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                    label: const Text('Chat'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(
+                        0xFF00BCD4,
+                      ).withValues(alpha: 0.1),
+                      foregroundColor: const Color(0xFF006064),
+                      elevation: 0,
+                      minimumSize: const Size(double.infinity, 44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
