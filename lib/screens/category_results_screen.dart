@@ -32,6 +32,9 @@ class CategoryResultsScreen extends StatelessWidget {
             // For category, we might want to store 'profession' exactly.
             .snapshots(),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }

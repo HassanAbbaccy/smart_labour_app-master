@@ -215,7 +215,9 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return _buildEmptyState('No new invitations at the moment.');
+                return _buildEmptyState(
+                  'No job invitations yet. When a client hires you, the request will appear here in real-time!',
+                );
               }
               return ListView.separated(
                 shrinkWrap: true,
@@ -442,19 +444,36 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             const SizedBox(height: 24.0),
 
             // Categories
-            _buildSectionHeader('Categories', actionLabel: 'See All'),
+            _buildSectionHeader(
+              'Categories',
+              actionLabel: 'See All',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const CategoryResultsScreen(category: 'All'),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 16),
             _buildCategoriesGrid(),
             const SizedBox(height: 24.0),
 
             // Top Rated Workers
-            const Text(
+            _buildSectionHeader(
               'Top Rated Workers',
-              style: TextStyle(
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1C18),
-              ),
+              actionLabel: 'See All',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const CategoryResultsScreen(category: 'All'),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 16.0),
             _buildTopRatedWorkers(),
@@ -526,7 +545,11 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     );
   }
 
-  Widget _buildSectionHeader(String title, {String? actionLabel}) {
+  Widget _buildSectionHeader(
+    String title, {
+    String? actionLabel,
+    VoidCallback? onTap,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -540,7 +563,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
         ),
         if (actionLabel != null)
           TextButton(
-            onPressed: () {},
+            onPressed: onTap,
             child: Text(
               actionLabel,
               style: const TextStyle(color: Color(0xFF00BCD4)),
@@ -784,21 +807,35 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
       stream: FirebaseFirestore.instance
           .collection('users')
           .where('role', isEqualTo: 'Worker')
-          .orderBy('rating', descending: true)
           .limit(10)
           .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text(
+              'Error loading workers: ${snapshot.error}',
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Text('No top-rated workers found.');
+          return _buildEmptyState(
+            'No top-rated workers found. Create another account with the "Worker" role to see it appear here!',
+          );
         }
 
         final workers = snapshot.data!.docs.map((doc) {
           return UserModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
         }).toList();
+
+        // Sort client-side to avoid Missing Index error in Firestore
+        workers.sort((a, b) => b.rating.compareTo(a.rating));
 
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
