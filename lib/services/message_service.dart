@@ -4,44 +4,57 @@ import '../models/message_model.dart';
 class MessageService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Create a conversation and return its id.
-  Future<String> createConversation({
-    required String name,
-    String? initialMessage,
-  }) async {
-    final ref = await _firestore.collection('conversations').add({
-      'name': name,
-      'lastMessage': initialMessage ?? '',
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-    return ref.id;
+  String getConversationId(String uid1, String uid2) {
+    List<String> ids = [uid1, uid2];
+    ids.sort();
+    return ids.join('_');
   }
 
-  /// Ensure a conversation exists with the provided id (no-op if exists).
-  Future<void> ensureConversation(String id, {required String name}) async {
-    final docRef = _firestore.collection('conversations').doc(id);
+  Future<String> getOrCreateConversation({
+    required String currentUserId,
+    required String peerId,
+    required String peerName,
+  }) async {
+    final chatId = getConversationId(currentUserId, peerId);
+    final docRef = _firestore.collection('chats').doc(chatId);
     final doc = await docRef.get();
+
     if (!doc.exists) {
       await docRef.set({
-        'name': name,
+        'participants': [currentUserId, peerId],
+        'names': {currentUserId: 'You', peerId: peerName},
         'lastMessage': '',
-        'updatedAt': FieldValue.serverTimestamp(),
+        'lastMessageTime': FieldValue.serverTimestamp(),
+        'unreadCount': 0,
+        'participantData': {
+          // Store minimal data for the list view
+          currentUserId: {'name': 'User', 'role': 'Client'},
+          peerId: {'name': peerName, 'role': 'Worker'},
+        },
       });
     }
+    return chatId;
   }
 
-  Stream<List<Map<String, dynamic>>> streamConversations() {
+  Stream<List<Map<String, dynamic>>> streamUserConversations(String userId) {
     return _firestore
-        .collection('conversations')
-        .orderBy('updatedAt', descending: true)
+        .collection('chats')
+        .where('participants', arrayContains: userId)
+        .orderBy('lastMessageTime', descending: true)
         .snapshots()
         .map(
           (snap) => snap.docs.map((d) {
             final data = d.data();
             return {
               'id': d.id,
-              'name': data['name'] ?? '',
+              'participants': data['participants'],
+              'names': data['names'] ?? {},
               'lastMessage': data['lastMessage'] ?? '',
+              'lastMessageTime':
+                  (data['lastMessageTime'] as Timestamp?)?.toDate() ??
+                  DateTime.now(),
+              'unreadCount': data['unreadCount'] ?? 0,
+              'participantData': data['participantData'] ?? {},
             };
           }).toList(),
         );
@@ -49,20 +62,38 @@ class MessageService {
 
   Stream<List<MessageModel>> streamMessages(String conversationId) {
     return _firestore
-        .collection('conversations')
+        .collection('chats')
         .doc(conversationId)
         .collection('messages')
-        .orderBy('sentAt')
+        .orderBy('sentAt', descending: true)
         .snapshots()
         .map((snap) => snap.docs.map((d) => MessageModel.fromDoc(d)).toList());
   }
 
   Future<void> sendMessage(String conversationId, MessageModel message) async {
-    final ref = _firestore.collection('conversations').doc(conversationId);
+    final ref = _firestore.collection('chats').doc(conversationId);
+
+    // Add message
     await ref.collection('messages').add(message.toMap());
+
+    // Update metadata
     await ref.update({
       'lastMessage': message.text,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'lastMessageTime': FieldValue.serverTimestamp(),
     });
+  }
+
+  // Temporary fix for dev_tools.dart
+  Future<String> createConversation({
+    required String name,
+    String? initialMessage,
+  }) async {
+    final ref = await _firestore.collection('chats').add({
+      'name': name,
+      'lastMessage': initialMessage ?? '',
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'participants': [],
+    });
+    return ref.id;
   }
 }

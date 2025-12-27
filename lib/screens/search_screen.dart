@@ -214,7 +214,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               ),
                               scrollDirection: Axis.horizontal,
                               itemCount: featuredWorkers.length,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (context, index) =>
                                   const SizedBox(width: 12),
                               itemBuilder: (context, index) {
                                 final colors = [
@@ -249,7 +249,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           physics: const NeverScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: filteredWorkers.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (context, index) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             return _buildNearbyCard(filteredWorkers[index]);

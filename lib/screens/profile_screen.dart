@@ -119,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (userData['role'] == 'Worker') ...[
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: occupations.contains(selectedProfession)
+                    initialValue: occupations.contains(selectedProfession)
                         ? selectedProfession
                         : null,
                     decoration: const InputDecoration(

@@ -286,7 +286,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       padding: const EdgeInsets.all(8.0),
                       child: Image.network(
                         logoUrl,
-                        errorBuilder: (_, __, ___) =>
+                        errorBuilder: (context, error, stackTrace) =>
                             Icon(Icons.payment, color: activeColor),
                       ),
                     ),

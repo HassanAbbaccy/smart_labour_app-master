@@ -1,10 +1,11 @@
+import 'package:untitled4/services/message_service.dart';
+import 'package:untitled4/screens/chat_screen.dart';
 import 'package:untitled4/screens/payment_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:untitled4/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:untitled4/models/user_model.dart';
-import 'package:untitled4/screens/chat_screen.dart';
 
 class WorkerProfileScreen extends StatefulWidget {
   final UserModel worker;
@@ -16,7 +17,7 @@ class WorkerProfileScreen extends StatefulWidget {
 }
 
 class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
-  Future<void> _launchWhatsApp(BuildContext context) async {
+  Future<void> _launchWhatsApp() async {
     final phone = widget.worker.whatsappNumber;
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -29,11 +30,11 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch WhatsApp')),
-        );
-      }
+      if (!context.mounted) return;
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch WhatsApp')),
+      );
     }
   }
 
@@ -173,24 +174,24 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
         'description': 'Direct hire from professional profile.',
       });
 
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PaymentScreen(
-              jobId: docRef.id,
-              amount: 'Rs. ${widget.worker.hourlyRate.toInt()}',
-              workerName: widget.worker.fullName,
-            ),
+      if (!context.mounted) return;
+      Navigator.push(
+        // ignore: use_build_context_synchronously
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentScreen(
+            jobId: docRef.id,
+            amount: 'Rs. ${widget.worker.hourlyRate.toInt()}',
+            workerName: widget.worker.fullName,
           ),
-        );
-      }
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+      if (!context.mounted) return;
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -468,7 +469,7 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
                 // WhatsApp Button
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _launchWhatsApp(context),
+                    onPressed: () => _launchWhatsApp(),
                     icon: const Icon(
                       Icons.message,
                       color: Colors.green,
@@ -490,13 +491,35 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
                 // Chat Button
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
+                      final currentUserId = AuthService().currentUser?.uid;
+                      if (currentUserId == null) return;
+
+                      // Show loading indicator
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) =>
+                            const Center(child: CircularProgressIndicator()),
+                      );
+
+                      final chatId = await MessageService()
+                          .getOrCreateConversation(
+                            currentUserId: currentUserId,
+                            peerId: widget.worker.uid,
+                            peerName: widget.worker.fullName,
+                          );
+
+                      if (!context.mounted) return;
+                      // ignore: use_build_context_synchronously
+                      Navigator.pop(context); // Remove loading
+                      // ignore: use_build_context_synchronously
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => ChatScreen(
                             peerName: widget.worker.fullName,
-                            conversationId: 'mock_conv_${widget.worker.uid}',
+                            conversationId: chatId,
                           ),
                         ),
                       );
