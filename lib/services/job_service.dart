@@ -21,4 +21,8 @@ class JobService {
   Future<void> createJob(JobModel job) async {
     await _firestore.collection('jobs').add(job.toMap());
   }
+
+  Future<void> updateJobStatus(String jobId, String status) async {
+    await _firestore.collection('jobs').doc(jobId).update({'status': status});
+  }
 }

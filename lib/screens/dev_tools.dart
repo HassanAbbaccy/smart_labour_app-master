@@ -56,10 +56,11 @@ class DevToolsScreen extends StatelessWidget {
       ),
     );
 
-    if (context.mounted)
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Seeded demo jobs and conversation')),
       );
+    }
   }
 
   Future<void> _testFirestoreAccess(BuildContext context) async {

@@ -131,6 +131,35 @@ class _JobCard extends StatelessWidget {
 
   const _JobCard({required this.job, required this.isWorker});
 
+  void _showCancelDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Request?'),
+        content: const Text(
+          'Are you sure you want to cancel this service request?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No, Keep It'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await FirebaseFirestore.instance
+                  .collection('jobs')
+                  .doc(job.id)
+                  .update({'status': 'CANCELLED'});
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = job.status?.toUpperCase() ?? '';
@@ -242,7 +271,11 @@ class _JobCard extends StatelessWidget {
                 ),
               if (!isWorker && isRequested)
                 OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () => _showCancelDialog(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                  ),
                   child: const Text('Cancel Request'),
                 ),
             ],
