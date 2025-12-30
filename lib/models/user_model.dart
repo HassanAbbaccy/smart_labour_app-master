@@ -18,6 +18,9 @@ class UserModel {
   final String? avatarUrl;
   final String? address;
   final double hourlyRate;
+  final bool isVerified;
+  final String verificationStatus; // 'none', 'pending', 'verified', 'rejected'
+  final List<String> verificationDocuments;
 
   UserModel({
     required this.uid,
@@ -39,6 +42,9 @@ class UserModel {
     this.avatarUrl,
     this.address,
     this.hourlyRate = 1200,
+    this.isVerified = false,
+    this.verificationStatus = 'none',
+    this.verificationDocuments = const [],
   });
 
   String get fullName => '$firstName $lastName';
@@ -64,6 +70,11 @@ class UserModel {
       avatarUrl: map['avatarUrl'],
       address: map['address'],
       hourlyRate: (map['hourlyRate'] ?? 1200).toDouble(),
+      isVerified: map['isVerified'] ?? false,
+      verificationStatus: map['verificationStatus'] ?? 'none',
+      verificationDocuments: List<String>.from(
+        map['verificationDocuments'] ?? [],
+      ),
     );
   }
 
@@ -87,6 +98,9 @@ class UserModel {
       'avatarUrl': avatarUrl,
       'address': address,
       'hourlyRate': hourlyRate,
+      'isVerified': isVerified,
+      'verificationStatus': verificationStatus,
+      'verificationDocuments': verificationDocuments,
     };
   }
 }

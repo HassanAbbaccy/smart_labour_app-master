@@ -10,6 +10,7 @@ import 'jobs_screen.dart';
 import 'messages_screen.dart';
 import 'search_screen.dart';
 import 'profile_screen.dart';
+import 'verification_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -171,6 +172,12 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // Verification CTA
+          if (user.verificationStatus != 'verified')
+            _buildVerificationCTA(user),
+
           const SizedBox(height: 24),
 
           // Stats Cards
@@ -349,6 +356,113 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildVerificationCTA(UserModel user) {
+    final status = user.verificationStatus;
+    final isPending = status == 'pending';
+    final isRejected = status == 'rejected';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isPending
+              ? [const Color(0xFFFFF8E1), const Color(0xFFFFECB3)]
+              : [const Color(0xFF009688), const Color(0xFF00BFA5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: (isPending ? Colors.amber : const Color(0xFF009688))
+                .withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPending ? Icons.hourglass_top : Icons.verified_user,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPending
+                          ? 'Verification Pending'
+                          : isRejected
+                          ? 'Verification Rejected'
+                          : 'Verify Your Profile',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      isPending
+                          ? 'We are reviewing your documents. This usually takes 24-48 hours.'
+                          : isRejected
+                          ? 'Your previous submission was not approved. Please try again.'
+                          : 'Get the "Verified" badge to attract 3x more clients!',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (!isPending) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => VerificationScreen(user: user),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF009688),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Start Verification',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
