@@ -78,16 +78,27 @@ class MessageService {
         .map((snap) => snap.docs.map((d) => MessageModel.fromDoc(d)).toList());
   }
 
-  Future<void> sendMessage(String conversationId, MessageModel message) async {
+  Future<void> sendMessage(
+    String conversationId,
+    MessageModel message,
+    String receiverId,
+  ) async {
     final ref = _firestore.collection('chats').doc(conversationId);
 
     // Add message
     await ref.collection('messages').add(message.toMap());
 
-    // Update metadata
+    // Update metadata and increment unread count for receiver
     await ref.update({
       'lastMessage': message.text,
       'lastMessageTime': FieldValue.serverTimestamp(),
+      'unreadCount': FieldValue.increment(1),
+    });
+  }
+
+  Future<void> markAsRead(String conversationId) async {
+    await _firestore.collection('chats').doc(conversationId).update({
+      'unreadCount': 0,
     });
   }
 

@@ -25,4 +25,30 @@ class JobService {
   Future<void> updateJobStatus(String jobId, String status) async {
     await _firestore.collection('jobs').doc(jobId).update({'status': status});
   }
+
+  Future<void> acceptJob(String jobId) async {
+    await _firestore.collection('jobs').doc(jobId).update({
+      'status': 'IN PROGRESS',
+    });
+  }
+
+  Future<void> declineJob(String jobId) async {
+    await _firestore.collection('jobs').doc(jobId).update({
+      'status': 'DECLINED',
+    });
+  }
+
+  Future<void> completeJob(String jobId, String workerId, double pay) async {
+    // Update job status
+    await _firestore.collection('jobs').doc(jobId).update({
+      'status': 'COMPLETED',
+    });
+
+    // Update worker stats
+    final workerRef = _firestore.collection('users').doc(workerId);
+    await workerRef.update({
+      'completedJobs': FieldValue.increment(1),
+      'monthlyEarnings': FieldValue.increment(pay),
+    });
+  }
 }

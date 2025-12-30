@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../models/job_model.dart';
+import '../services/job_service.dart';
 import '../services/auth_service.dart';
 
 class JobsScreen extends StatefulWidget {
@@ -243,12 +244,7 @@ class _JobCard extends StatelessWidget {
               ),
               if (isWorker && isRequested)
                 ElevatedButton(
-                  onPressed: () async {
-                    await FirebaseFirestore.instance
-                        .collection('jobs')
-                        .doc(job.id)
-                        .update({'status': 'IN PROGRESS'});
-                  },
+                  onPressed: () => JobService().acceptJob(job.id),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00BFA5),
                     foregroundColor: Colors.white,
@@ -257,11 +253,18 @@ class _JobCard extends StatelessWidget {
                 ),
               if (isWorker && isInProgress)
                 ElevatedButton(
-                  onPressed: () async {
-                    await FirebaseFirestore.instance
-                        .collection('jobs')
-                        .doc(job.id)
-                        .update({'status': 'COMPLETED'});
+                  onPressed: () {
+                    // Extract pay amount from job.pay string (e.g., "5000" from "Rs. 5000")
+                    final payAmount =
+                        double.tryParse(
+                          job.pay.replaceAll(RegExp(r'[^0-9.]'), ''),
+                        ) ??
+                        0.0;
+                    JobService().completeJob(
+                      job.id,
+                      job.workerId ?? '',
+                      payAmount,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,

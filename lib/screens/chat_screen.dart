@@ -23,6 +23,13 @@ class _ChatScreenState extends State<ChatScreen> {
   final MessageService _service = MessageService();
   final ScrollController _scrollController = ScrollController();
 
+  @override
+  void initState() {
+    super.initState();
+    // Mark messages as read when opening the chat
+    _service.markAsRead(widget.conversationId);
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
@@ -38,7 +45,12 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     _controller.clear();
-    await _service.sendMessage(widget.conversationId, msg);
+
+    // Extract peer ID from conversation ID
+    final parts = widget.conversationId.split('_');
+    final peerId = parts.firstWhere((id) => id != userId, orElse: () => '');
+
+    await _service.sendMessage(widget.conversationId, msg, peerId);
   }
 
   @override

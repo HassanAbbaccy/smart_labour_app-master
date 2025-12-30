@@ -54,6 +54,7 @@ class DevToolsScreen extends StatelessWidget {
         senderId: 'client',
         timestamp: DateTime.now(),
       ),
+      'worker', // receiverId for demo
     );
 
     if (context.mounted) {

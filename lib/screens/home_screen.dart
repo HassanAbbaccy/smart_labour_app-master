@@ -11,6 +11,7 @@ import 'messages_screen.dart';
 import 'search_screen.dart';
 import 'profile_screen.dart';
 import 'verification_screen.dart';
+import '../services/job_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -301,19 +302,14 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () => JobService().declineJob(job.id),
                   child: const Text('Decline'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () async {
-                    await FirebaseFirestore.instance
-                        .collection('jobs')
-                        .doc(job.id)
-                        .update({'status': 'IN PROGRESS'});
-                  },
+                  onPressed: () => JobService().acceptJob(job.id),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF009688),
                     foregroundColor: Colors.white,
