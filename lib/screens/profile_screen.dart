@@ -26,32 +26,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (image == null) return;
 
     final uid = AuthService().firebaseUser?.uid;
-    if (uid == null) return;
+    if (uid == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to upload photos')),
+        );
+      }
+      return;
+    }
 
     setState(() => _isUploading = true);
 
     try {
+      // Create storage reference
       final ref = FirebaseStorage.instance
           .ref()
           .child('avatars')
           .child('$uid.jpg');
-      await ref.putFile(File(image.path));
-      final url = await ref.getDownloadURL();
 
+      // Upload file
+      final uploadTask = ref.putFile(File(image.path));
+
+      // Wait for upload to complete
+      final snapshot = await uploadTask;
+
+      // Get download URL
+      final url = await snapshot.ref.getDownloadURL();
+
+      // Update Firestore with new avatar URL
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'avatarUrl': url,
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile picture updated!')),
+          const SnackBar(
+            content: Text('Profile picture updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on FirebaseException catch (e) {
+      String errorMessage = 'Upload failed';
+
+      if (e.code == 'object-not-found') {
+        errorMessage =
+            'Storage not configured. Please enable Firebase Storage in Firebase Console.';
+      } else if (e.code == 'unauthorized') {
+        errorMessage =
+            'Permission denied. Please check Firebase Storage rules.';
+      } else if (e.code == 'canceled') {
+        errorMessage = 'Upload was cancelled';
+      } else if (e.code == 'unknown') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else {
+        errorMessage = 'Upload failed: ${e.message}';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unexpected error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);

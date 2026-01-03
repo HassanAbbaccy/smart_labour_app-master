@@ -4,7 +4,7 @@ import '../screens/signup_screen.dart';
 import '../screens/forget_password_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/role_selection_screen.dart';
-import '../screens/phone_signin_screen.dart';
+import '../screens/onboarding_screen.dart';
 import '../services/auth_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -46,7 +46,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                          builder: (_) => const PhoneSignInScreen(),
+                          builder: (_) => const OnboardingScreen(),
                         ),
                       );
                     },

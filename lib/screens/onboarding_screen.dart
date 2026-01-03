@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:untitled4/screens/phone_signin_screen.dart';
+import 'package:untitled4/screens/signin_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -42,9 +42,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: TextButton(
                 onPressed: () {
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => const PhoneSignInScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const SignInScreen()),
                   );
                 },
                 child: const Text(
@@ -96,9 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       );
                     } else {
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => const PhoneSignInScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const SignInScreen()),
                       );
                     }
                   },
