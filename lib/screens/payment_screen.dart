@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../services/payment_service.dart';
+import '../services/auth_service.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String jobId;
@@ -20,14 +22,37 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   String selectedMethod = 'EasyPaisa';
   bool isProcessing = false;
+  final TextEditingController _mobileController = TextEditingController();
+  final PaymentService _paymentService = PaymentService();
 
   Future<void> _processPayment() async {
+    if (selectedMethod == 'EasyPaisa' && _mobileController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your mobile number')),
+      );
+      return;
+    }
+
     setState(() => isProcessing = true);
 
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
-
     try {
+      if (selectedMethod == 'EasyPaisa') {
+        final email = AuthService().currentUser?.email ?? 'guest@example.com';
+
+        await _paymentService.initiateEasypaisaPayment(
+          amount: widget.amount.replaceAll(
+            RegExp(r'[^0-9.]'),
+            '',
+          ), // Clean amount
+          mobileNumber: _mobileController.text,
+          email: email,
+          orderId: _paymentService.generateOrderId(),
+        );
+      } else {
+        // Simulate delay for other methods
+        await Future.delayed(const Duration(seconds: 2));
+      }
+
       await FirebaseFirestore.instance
           .collection('jobs')
           .doc(widget.jobId)
@@ -207,6 +232,28 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const Color(0xFF1976D2),
               icon: Icons.account_balance,
             ),
+
+            if (selectedMethod == 'EasyPaisa') ...[
+              const SizedBox(height: 24),
+              const Text(
+                'Easypaisa Mobile Account',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _mobileController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  hintText: '03XX XXXXXXX',
+                  prefixIcon: const Icon(Icons.phone_android),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 48),
 
