@@ -11,6 +11,7 @@ import 'messages_screen.dart';
 import 'search_screen.dart';
 import 'profile_screen.dart';
 import 'verification_screen.dart';
+import 'admin_dashboard_screen.dart';
 import '../services/job_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -131,6 +132,8 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
 
         if (user.role == 'Worker') {
           return _buildWorkerDashboard(user);
+        } else if (user.role == 'Admin') {
+          return const AdminDashboardScreen();
         } else {
           return _buildClientDashboard(user);
         }
@@ -557,11 +560,11 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                   .limit(1)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const SizedBox.shrink();
+                JobModel? job;
+                if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                  job = JobModel.fromDoc(snapshot.data!.docs.first);
                 }
 
-                final job = JobModel.fromDoc(snapshot.data!.docs.first);
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -573,7 +576,37 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                       },
                     ),
                     const SizedBox(height: 8),
-                    _buildRecentActivityCard(job),
+                    if (job != null)
+                      _buildRecentActivityCard(job)
+                    else
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.history,
+                              size: 48,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'No recent activity',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 24.0),
                   ],
                 );

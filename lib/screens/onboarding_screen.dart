@@ -148,7 +148,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 color: const Color(0xFFE0F2F1),
                 image: const DecorationImage(
                   // In a real app, use the asset provided. For now, using a placeholder/network or container styling.
-                  image: NetworkImage('https://i.pravatar.cc/300?u=painter'),
+                  image: NetworkImage(
+                    'https://images.unsplash.com/photo-1581094794329-cd19430eef3a?w=500&auto=format&fit=crop&q=60',
+                  ),
                   fit: BoxFit.cover,
                 ),
               ),

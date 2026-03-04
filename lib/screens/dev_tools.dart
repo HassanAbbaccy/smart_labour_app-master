@@ -5,6 +5,7 @@ import 'package:untitled4/models/job_model.dart';
 import 'package:untitled4/models/message_model.dart';
 import 'package:untitled4/services/job_service.dart';
 import 'package:untitled4/services/message_service.dart';
+import 'package:untitled4/services/auth_service.dart';
 
 class DevToolsScreen extends StatelessWidget {
   const DevToolsScreen({super.key});
@@ -148,6 +149,38 @@ class DevToolsScreen extends StatelessWidget {
               child: const Text(
                 '⚠️ Test Firestore Permission (chats collection)',
               ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () async {
+                await AuthService().setUserRole('Admin');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Role set to Admin')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Set Role: Admin'),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () async {
+                await AuthService().setUserRole('Worker');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Role set to Worker')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Set Role: Worker'),
             ),
             const SizedBox(height: 12),
             const Text(

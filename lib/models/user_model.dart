@@ -21,6 +21,8 @@ class UserModel {
   final bool isVerified;
   final String verificationStatus; // 'none', 'pending', 'verified', 'rejected'
   final List<String> verificationDocuments;
+  final String? cnicFrontUrl;
+  final String? cnicBackUrl;
 
   UserModel({
     required this.uid,
@@ -45,6 +47,8 @@ class UserModel {
     this.isVerified = false,
     this.verificationStatus = 'none',
     this.verificationDocuments = const [],
+    this.cnicFrontUrl,
+    this.cnicBackUrl,
   });
 
   String get fullName => '$firstName $lastName';
@@ -75,6 +79,8 @@ class UserModel {
       verificationDocuments: List<String>.from(
         map['verificationDocuments'] ?? [],
       ),
+      cnicFrontUrl: map['cnicFrontUrl'],
+      cnicBackUrl: map['cnicBackUrl'],
     );
   }
 
@@ -101,6 +107,8 @@ class UserModel {
       'isVerified': isVerified,
       'verificationStatus': verificationStatus,
       'verificationDocuments': verificationDocuments,
+      'cnicFrontUrl': cnicFrontUrl,
+      'cnicBackUrl': cnicBackUrl,
     };
   }
 }

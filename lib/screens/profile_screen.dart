@@ -5,6 +5,8 @@ import 'package:untitled4/screens/signin_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:untitled4/screens/dev_tools.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -580,6 +582,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           iconColor: const Color(0xFFFFEBEE),
                           iconTextColor: Colors.red,
                         ),
+                        if (kDebugMode)
+                          _buildMenuItem(
+                            icon: Icons.developer_mode,
+                            title: 'Dev Tools',
+                            iconColor: Colors.orange.withValues(alpha: 0.1),
+                            iconTextColor: Colors.orange,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const DevToolsScreen(),
+                                ),
+                              );
+                            },
+                          ),
 
                         const SizedBox(height: 24),
                         _buildMenuItem(
