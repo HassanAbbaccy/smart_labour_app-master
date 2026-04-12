@@ -12,6 +12,8 @@ import 'search_screen.dart';
 import 'profile_screen.dart';
 import 'verification_screen.dart';
 import 'admin_dashboard_screen.dart';
+import 'create_job_screen.dart';
+import 'job_feed_screen.dart';
 import '../services/job_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static final List<Widget> _widgetOptions = <Widget>[
     const HomeScreenBody(),
-    const SearchScreen(),
+    AuthService().currentUser?.role == 'Worker' ? const JobFeedScreen() : const SearchScreen(),
     const JobsScreen(),
     const MessagesScreen(),
     const ProfileScreen(),
@@ -50,24 +52,26 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
         showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(
+          AuthService().currentUser?.role == 'Worker'
+              ? const BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed), label: 'Feed')
+              : const BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.work_outline),
             activeIcon: Icon(Icons.work),
             label: 'Jobs',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat_bubble),
             label: 'Chat',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
             label: 'Profile',
@@ -484,8 +488,10 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
   }
 
   Widget _buildClientDashboard(UserModel user) {
-    return SafeArea(
-      child: SingleChildScrollView(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,6 +656,15 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             const SizedBox(height: 80),
           ],
         ),
+      ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+           Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateJobScreen()));
+        },
+        backgroundColor: const Color(0xFF00BCD4),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Post a Job', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

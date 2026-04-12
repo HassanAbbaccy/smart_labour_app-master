@@ -1,18 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../services/payment_service.dart';
-import '../services/auth_service.dart';
+import 'mock_gateway_screen.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String jobId;
   final String amount;
   final String workerName;
+  final String workerId;
 
   const PaymentScreen({
     super.key,
     required this.jobId,
     required this.amount,
     required this.workerName,
+    required this.workerId,
   });
 
   @override
@@ -23,55 +26,118 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String selectedMethod = 'EasyPaisa';
   bool isProcessing = false;
   final TextEditingController _mobileController = TextEditingController();
-  final PaymentService _paymentService = PaymentService();
 
   Future<void> _processPayment() async {
-    if (selectedMethod == 'EasyPaisa' && _mobileController.text.isEmpty) {
+    if ((selectedMethod == 'EasyPaisa' || selectedMethod == 'JazzCash') &&
+        _mobileController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your mobile number')),
       );
       return;
     }
 
-    setState(() => isProcessing = true);
+    if (selectedMethod == 'EasyPaisa' || selectedMethod == 'JazzCash') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MockGatewayScreen(
+            paymentMethod: selectedMethod,
+            amount: widget.amount,
+            jobId: widget.jobId,
+            workerName: widget.workerName,
+            workerId: widget.workerId,
+            mobileNumber: _mobileController.text,
+          ),
+        ),
+      );
+    } else if (selectedMethod == 'Stripe (Card)') {
+      setState(() => isProcessing = true);
+      try {
+        final amountInCents = (double.parse(widget.amount.replaceAll(RegExp(r'[^0-9.]'), '')) * 100).toInt();
+        
+        final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('createPaymentIntent');
+        final response = await callable.call({
+          'amount': amountInCents,
+          'currency': 'pkr',
+          'jobId': widget.jobId,
+        });
 
-    try {
-      if (selectedMethod == 'EasyPaisa') {
-        final email = AuthService().currentUser?.email ?? 'guest@example.com';
+        final clientSecret = response.data['clientSecret'];
 
-        await _paymentService.initiateEasypaisaPayment(
-          amount: widget.amount.replaceAll(
-            RegExp(r'[^0-9.]'),
-            '',
-          ), // Clean amount
-          mobileNumber: _mobileController.text,
-          email: email,
-          orderId: _paymentService.generateOrderId(),
-        );
-      } else {
-        // Simulate delay for other methods
-        await Future.delayed(const Duration(seconds: 2));
-      }
-
-      await FirebaseFirestore.instance
-          .collection('jobs')
-          .doc(widget.jobId)
-          .update({'paymentStatus': 'PAID', 'paymentMethod': selectedMethod});
-
-      if (mounted) {
-        _showSuccessDialog();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Payment Error: $e'),
-            backgroundColor: Colors.red,
+        await Stripe.instance.initPaymentSheet(
+          paymentSheetParameters: SetupPaymentSheetParameters(
+            paymentIntentClientSecret: clientSecret,
+            merchantDisplayName: 'SmartLabour',
           ),
         );
+
+        await Stripe.instance.presentPaymentSheet();
+
+        await FirebaseFirestore.instance.collection('jobs').doc(widget.jobId).update({
+          'paymentStatus': 'IN_ESCROW',
+          'paymentMethod': selectedMethod,
+          'status': 'IN_PROGRESS', 
+          'workerId': widget.workerId,
+          'workerName': widget.workerName,
+        });
+
+        final cleanAmount = widget.amount.replaceAll(RegExp(r'[^0-9.]'), '');
+        final amt = double.tryParse(cleanAmount) ?? 0.0;
+        await FirebaseFirestore.instance.collection('users').doc(widget.workerId).update({'escrowBalance': FieldValue.increment(amt)});
+
+        if (mounted) {
+          _showSuccessDialog();
+        }
+      } catch (e) {
+        if (mounted) {
+          if (e is StripeException) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment cancelled or failed.'), backgroundColor: Colors.red));
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payment Error: $e'), backgroundColor: Colors.red));
+          }
+        }
+      } finally {
+        if (mounted) setState(() => isProcessing = false);
       }
-    } finally {
-      if (mounted) setState(() => isProcessing = false);
+    } else {
+      // For Bank Transfer or other methods
+      setState(() => isProcessing = true);
+      try {
+        await Future.delayed(const Duration(seconds: 2));
+
+        await FirebaseFirestore.instance
+            .collection('jobs')
+            .doc(widget.jobId)
+            .update({
+              'paymentStatus': 'IN_ESCROW',
+              'paymentMethod': selectedMethod,
+              'status': 'IN_PROGRESS', // job starts!
+              'workerId': widget.workerId,
+              'workerName': widget.workerName,
+            });
+
+        final cleanAmount = widget.amount.replaceAll(RegExp(r'[^0-9.]'), '');
+        final amt = double.tryParse(cleanAmount) ?? 0.0;
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.workerId)
+            .update({'escrowBalance': FieldValue.increment(amt)});
+
+        if (mounted) {
+          _showSuccessDialog();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Payment Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => isProcessing = false);
+      }
     }
   }
 
@@ -232,12 +298,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const Color(0xFF1976D2),
               icon: Icons.account_balance,
             ),
+            const SizedBox(height: 12),
 
-            if (selectedMethod == 'EasyPaisa') ...[
+            // Stripe Card
+            _buildPaymentMethod(
+              'Stripe (Card)',
+              'Pay securely with Debit/Credit Card',
+              'https://images.fastcompany.net/image/upload/w_1280,f_auto,q_auto,fl_lossy/wp-cms/uploads/2021/04/p-1-stripe-logo-2021.jpg',
+              const Color(0xFFF3E5F5),
+              const Color(0xFF673AB7),
+              icon: Icons.credit_card,
+            ),
+
+            if (selectedMethod == 'EasyPaisa' ||
+                selectedMethod == 'JazzCash') ...[
               const SizedBox(height: 24),
-              const Text(
-                'Easypaisa Mobile Account',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Text(
+                '$selectedMethod Mobile Account',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(

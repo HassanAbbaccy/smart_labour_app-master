@@ -39,16 +39,49 @@ class JobService {
   }
 
   Future<void> completeJob(String jobId, String workerId, double pay) async {
+    final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
+
     // Update job status
-    await _firestore.collection('jobs').doc(jobId).update({
-      'status': 'COMPLETED',
-    });
+    Map<String, dynamic> jobUpdates = {'status': 'COMPLETED'};
+
+    // Release Escrow if payment was held
+    bool releaseEscrow = false;
+    if (jobDoc.exists) {
+      final jobData = jobDoc.data() as Map<String, dynamic>;
+      if (jobData['paymentStatus'] == 'IN_ESCROW') {
+        releaseEscrow = true;
+        jobUpdates['paymentStatus'] = 'RELEASED';
+      }
+    }
+
+    await _firestore.collection('jobs').doc(jobId).update(jobUpdates);
 
     // Update worker stats
-    final workerRef = _firestore.collection('users').doc(workerId);
-    await workerRef.update({
+    Map<String, dynamic> workerUpdates = {
       'completedJobs': FieldValue.increment(1),
       'monthlyEarnings': FieldValue.increment(pay),
-    });
+    };
+
+    if (releaseEscrow) {
+      workerUpdates['escrowBalance'] = FieldValue.increment(-pay);
+      workerUpdates['walletBalance'] = FieldValue.increment(pay);
+    }
+
+    final workerRef = _firestore.collection('users').doc(workerId);
+    await workerRef.update(workerUpdates);
+  }
+
+  Future<void> applyForJob(ApplicationModel app) async {
+    // Save to a root 'applications' collection
+    await _firestore.collection('applications').add(app.toMap());
+  }
+
+  Stream<List<ApplicationModel>> streamJobApplications(String jobId) {
+    return _firestore
+        .collection('applications')
+        .where('jobId', isEqualTo: jobId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => ApplicationModel.fromDoc(d)).toList());
   }
 }

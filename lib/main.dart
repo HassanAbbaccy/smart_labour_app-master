@@ -3,11 +3,17 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:untitled4/screens/splash_screen.dart';
 import 'firebase_options.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:untitled4/services/auth_service.dart';
 import './theme/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Stripe with a test publishable key placeholder
+  Stripe.publishableKey =
+      'pk_test_51OlXN3CL14HqKZfzoVipcJ2tFOyUudDyyF6W29CTwmkkWUKfaYTTpRRFBZcyc2UCwoJpH9Z3dnYIcGpqXRNhiHo4007pWQwlZ6';
+  await Stripe.instance.applySettings();
 
   // Handle Flutter errors
   FlutterError.onError = (details) {

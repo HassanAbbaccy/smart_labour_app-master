@@ -85,3 +85,61 @@ class JobModel {
     'paymentMethod': paymentMethod,
   };
 }
+
+class ApplicationModel {
+  final String id;
+  final String jobId;
+  final String workerId;
+  final String workerName;
+  final String workerProfession;
+  final String workerAvatarUrl;
+  final double workerRating;
+  final String status; // 'pending', 'accepted', 'rejected'
+  final DateTime? createdAt;
+  final String? coverLetter;
+
+  ApplicationModel({
+    required this.id,
+    required this.jobId,
+    required this.workerId,
+    required this.workerName,
+    required this.workerProfession,
+    required this.workerAvatarUrl,
+    required this.workerRating,
+    this.status = 'pending',
+    this.createdAt,
+    this.coverLetter,
+  });
+
+  factory ApplicationModel.fromDoc(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    final ts = data['createdAt'];
+    DateTime? created;
+    if (ts is Timestamp) created = ts.toDate();
+
+    return ApplicationModel(
+      id: doc.id,
+      jobId: data['jobId'] ?? '',
+      workerId: data['workerId'] ?? '',
+      workerName: data['workerName'] ?? '',
+      workerProfession: data['workerProfession'] ?? '',
+      workerAvatarUrl: data['workerAvatarUrl'] ?? '',
+      workerRating: (data['workerRating'] ?? 0.0).toDouble(),
+      status: data['status'] ?? 'pending',
+      createdAt: created,
+      coverLetter: data['coverLetter'],
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'jobId': jobId,
+    'workerId': workerId,
+    'workerName': workerName,
+    'workerProfession': workerProfession,
+    'workerAvatarUrl': workerAvatarUrl,
+    'workerRating': workerRating,
+    'status': status,
+    'createdAt': FieldValue.serverTimestamp(),
+    'coverLetter': coverLetter,
+  };
+}

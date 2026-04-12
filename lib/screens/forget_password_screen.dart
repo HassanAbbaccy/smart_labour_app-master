@@ -33,8 +33,14 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Please enter email';
-                  if (!RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}").hasMatch(value)) return 'Enter valid email';
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter email';
+                  }
+                  if (!RegExp(
+                    r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}",
+                  ).hasMatch(value)) {
+                    return 'Enter valid email';
+                  }
                   return null;
                 },
                 decoration: const InputDecoration(label: Text('Email')),
@@ -44,7 +50,18 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleReset,
-                  child: _isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Text('Send Reset Email'),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Send Reset Email'),
                 ),
               ),
             ],
@@ -58,17 +75,31 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      final result = await AuthService().resetPassword(_emailController.text.trim());
+      final result = await AuthService().resetPassword(
+        _emailController.text.trim(),
+      );
       if (result['success'] == true) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password reset email sent')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Password reset email sent')),
+          );
           Navigator.of(context).pop();
         }
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? 'Failed to send reset email')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to send reset email'),
+            ),
+          );
+        }
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

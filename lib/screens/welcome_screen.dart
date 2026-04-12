@@ -4,6 +4,7 @@ import '../screens/signup_screen.dart';
 import '../theme/theme.dart';
 import '../widgets/custom_scaffold.dart';
 import '../widgets/welcome_button.dart';
+import 'admin_login_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -14,66 +15,77 @@ class WelcomeScreen extends StatelessWidget {
       child: Column(
         children: [
           Flexible(
-              flex: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 0,
-                  horizontal: 40.0,
-                ),
-                child: Center(
+            flex: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                vertical: 0,
+                horizontal: 40.0,
+              ),
+              child: Center(
+                child: GestureDetector(
+                  onLongPress: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+                    );
+                  },
                   child: RichText(
                     textAlign: TextAlign.center,
-                    text: TextSpan(
-                      children: [
-                        const TextSpan(
-                            text: 'Smart\n',
-                            style: TextStyle(
-                              fontSize: 45.0,
-                              fontWeight: FontWeight.w600,
-                            )),
-                        TextSpan(
-                          children: [
-                            WidgetSpan(
-                              child: ShaderMask(
-                                shaderCallback: (bounds) => const LinearGradient(
-                                  colors: [
-                                    Colors.deepPurple,
-                                    Colors.purple,
-                                    Colors.pinkAccent,
-                                    Colors.greenAccent,
-                                    Colors.cyan,
-                                    Colors.lightGreen,
-                                    Colors.red,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ).createShader(bounds),
-                                child: const Text(
-                                  'Labour App\n',
-                                  style: TextStyle(
-                                    fontSize: 45,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white, // required so gradient shows
-                                  ),
+                  text: TextSpan(
+                    children: [
+                      const TextSpan(
+                        text: 'Smart\n',
+                        style: TextStyle(
+                          fontSize: 45.0,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      TextSpan(
+                        children: [
+                          WidgetSpan(
+                            child: ShaderMask(
+                              shaderCallback: (bounds) => const LinearGradient(
+                                colors: [
+                                  Colors.deepPurple,
+                                  Colors.purple,
+                                  Colors.pinkAccent,
+                                  Colors.greenAccent,
+                                  Colors.cyan,
+                                  Colors.lightGreen,
+                                  Colors.red,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ).createShader(bounds),
+                              child: const Text(
+                                'Labour App\n',
+                                style: TextStyle(
+                                  fontSize: 45,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors
+                                      .white, // required so gradient shows
                                 ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
 
-
-                        TextSpan(
-                            text:
+                      TextSpan(
+                        text:
                             '\nEnter personal details to your employee account',
-                            style: TextStyle(
-                              fontSize: 20,
-                              // height: 0,
-                            ))
-                      ],
-                    ),
+                        style: TextStyle(
+                          fontSize: 20,
+                          // height: 0,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              )),
+              ),
+            ),
+          ),
+          ),
           Flexible(
             flex: 1,
             child: Align(

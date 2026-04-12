@@ -19,12 +19,19 @@ class JobDetailScreen extends StatelessWidget {
                 children: [
                   Text(
                     j.title,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 6),
                       Text(j.location),
                       const Spacer(),
@@ -32,13 +39,22 @@ class JobDetailScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Job Description', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Job Description',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 8),
-                  Text(j.description.isNotEmpty ? j.description : 'No description provided.'),
+                  Text(
+                    j.description.isNotEmpty
+                        ? j.description
+                        : 'No description provided.',
+                  ),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Applied (demo)')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Applied (demo)')),
+                      );
                     },
                     icon: const Icon(Icons.send),
                     label: const Text('Apply for Job'),

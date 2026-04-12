@@ -12,6 +12,7 @@ class UserModel {
   final double monthlyEarnings;
   final int activeJobs;
   final double walletBalance;
+  final double escrowBalance;
   final List<String> skills;
   final String experience;
   final String whatsappNumber;
@@ -38,6 +39,7 @@ class UserModel {
     this.monthlyEarnings = 0,
     this.activeJobs = 0,
     this.walletBalance = 0.0,
+    this.escrowBalance = 0.0,
     this.skills = const [],
     this.experience = '',
     this.whatsappNumber = '',
@@ -68,6 +70,7 @@ class UserModel {
       monthlyEarnings: (map['monthlyEarnings'] ?? 0).toDouble(),
       activeJobs: map['activeJobs'] ?? 0,
       walletBalance: (map['walletBalance'] ?? 0.0).toDouble(),
+      escrowBalance: (map['escrowBalance'] ?? 0.0).toDouble(),
       skills: List<String>.from(map['skills'] ?? []),
       experience: map['experience'] ?? '',
       whatsappNumber: map['whatsappNumber'] ?? '',
@@ -98,6 +101,7 @@ class UserModel {
       'monthlyEarnings': monthlyEarnings,
       'activeJobs': activeJobs,
       'walletBalance': walletBalance,
+      'escrowBalance': escrowBalance,
       'skills': skills,
       'experience': experience,
       'whatsappNumber': whatsappNumber,

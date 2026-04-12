@@ -183,6 +183,7 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
             jobId: docRef.id,
             amount: 'Rs. ${widget.worker.hourlyRate.toInt()}',
             workerName: widget.worker.fullName,
+            workerId: widget.worker.uid,
           ),
         ),
       );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/job_model.dart';
 import '../services/job_service.dart';
 import '../services/auth_service.dart';
+import 'job_applicants_screen.dart';
 
 class JobsScreen extends StatefulWidget {
   const JobsScreen({super.key});
@@ -76,6 +77,7 @@ class _JobsScreenState extends State<JobsScreen>
         controller: _tabController,
         children: [
           _buildJobStream(uid, userRole, [
+            'OPEN',
             'IN PROGRESS',
             'REQUESTED',
             'SCHEDULED',
@@ -118,7 +120,15 @@ class _JobsScreenState extends State<JobsScreen>
           itemCount: jobs.length,
           separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
-            return _JobCard(job: jobs[index], isWorker: role == 'Worker');
+            final job = jobs[index];
+            return GestureDetector(
+              onTap: () {
+                if (role != 'Worker' && job.status == 'OPEN') {
+                   Navigator.push(context, MaterialPageRoute(builder: (_) => JobApplicantsScreen(job: job)));
+                }
+              },
+              child: _JobCard(job: job, isWorker: role == 'Worker'),
+            );
           },
         );
       },
@@ -164,13 +174,17 @@ class _JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = job.status?.toUpperCase() ?? '';
+    final isOpen = status == 'OPEN';
     final isRequested = status == 'REQUESTED';
     final isInProgress = status == 'IN PROGRESS';
 
     Color statusColor = const Color(0xFFE0F2F1);
     Color statusTextColor = const Color(0xFF009688);
 
-    if (isRequested) {
+    if (isOpen) {
+       statusColor = const Color(0xFFE3F2FD);
+       statusTextColor = const Color(0xFF1976D2);
+    } else if (isRequested) {
       statusColor = const Color(0xFFFFF3E0);
       statusTextColor = const Color(0xFFEF6C00);
     } else if (isInProgress) {
@@ -242,6 +256,11 @@ class _JobCard extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
               ),
+              if (!isWorker && isOpen)
+                const Text(
+                  'Tap to View Applicants',
+                  style: TextStyle(color: Color(0xFF00BCD4), fontWeight: FontWeight.bold, fontSize: 12),
+                ),
               if (isWorker && isRequested)
                 ElevatedButton(
                   onPressed: () => JobService().acceptJob(job.id),
@@ -251,7 +270,7 @@ class _JobCard extends StatelessWidget {
                   ),
                   child: const Text('Accept'),
                 ),
-              if (isWorker && isInProgress)
+              if (!isWorker && isInProgress)
                 ElevatedButton(
                   onPressed: () {
                     // Extract pay amount from job.pay string (e.g., "5000" from "Rs. 5000")
@@ -270,7 +289,7 @@ class _JobCard extends StatelessWidget {
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Complete'),
+                  child: const Text('Mark Completed'),
                 ),
               if (!isWorker && isRequested)
                 OutlinedButton(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../services/auth_service.dart';
+import 'welcome_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -44,6 +46,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         title: const Text('Admin Dashboard'),
         backgroundColor: const Color(0xFF009688),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sign Out Admin',
+            onPressed: () async {
+              await AuthService().signOut();
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                (route) => false,
+              );
+            },
+          )
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await FirebaseFirestore.instance.collection('users').add({
+            'firstName': 'Sample',
+            'lastName': 'Worker',
+            'profession': 'Electrician',
+            'verificationStatus': 'pending',
+            'isVerified': false,
+            'cnicFrontUrl': 'https://via.placeholder.com/600x400?text=CNIC+Front',
+            'cnicBackUrl': 'https://via.placeholder.com/600x400?text=CNIC+Back',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sample verification request added!')),
+          );
+        },
+        backgroundColor: const Color(0xFF009688),
+        tooltip: 'Add Sample Data',
+        child: const Icon(Icons.bug_report, color: Colors.white),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
