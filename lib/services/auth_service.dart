@@ -1,5 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
@@ -9,7 +8,6 @@ class AuthService {
 
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   UserModel? _currentUser;
 
@@ -45,6 +43,10 @@ class AuthService {
     try {
       final user = _firebaseAuth.currentUser;
       if (user != null) {
+        // Start listening to user stream to keep _currentUser reactive
+        userStream.listen((userModel) {
+          _currentUser = userModel;
+        });
         await _loadUserFromFirestore(user.uid);
       }
     } catch (e) {
@@ -327,63 +329,4 @@ class AuthService {
     }
   }
 
-  // Sign in with Google
-  Future<Map<String, dynamic>> signInWithGoogle() async {
-    try {
-      // Trigger the authentication flow
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-
-      // Create a new credential
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: null,
-        idToken: googleAuth.idToken,
-      );
-
-      // Once signed in, return the UserCredential
-      final userCredential = await _firebaseAuth.signInWithCredential(
-        credential,
-      );
-      final user = userCredential.user;
-
-      if (user != null) {
-        // Check if user exists in Firestore, if not create basic profile
-        final doc = await _firestore.collection('users').doc(user.uid).get();
-        if (!doc.exists) {
-          // Split full name if possible
-          final names = googleUser.displayName?.split(' ') ?? ['User', ''];
-          final firstName = names[0];
-          final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
-
-          await _firestore.collection('users').doc(user.uid).set({
-            'uid': user.uid,
-            'email': user.email ?? '',
-            'firstName': firstName,
-            'lastName': lastName,
-            'phoneNumber': user.phoneNumber ?? '',
-            'profession': '',
-            'role': '',
-            'rating': 5.0,
-            'completedJobs': 0,
-            'monthlyEarnings': 0.0,
-            'activeJobs': 0,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-        }
-        await _loadUserFromFirestore(user.uid);
-      }
-
-      return {
-        'success': true,
-        'message': 'Sign in successful',
-        'user': _currentUser,
-      };
-    } catch (e) {
-      debugPrint('Error signing in with Google: $e');
-      return {'success': false, 'message': 'An error occurred: $e'};
-    }
-  }
 }

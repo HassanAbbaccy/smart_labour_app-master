@@ -12,12 +12,29 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
-    // Auto-navigate after 3 seconds
-    Timer(const Duration(seconds: 3), _goNext);
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _controller.forward();
+
+    // Auto-navigate after 3.5 seconds
+    Timer(const Duration(milliseconds: 3500), _goNext);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _goNext() {
@@ -46,56 +63,72 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAF3),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo Container
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF7C3AED), // Purple
-                    Color(0xFF00BCD4), // Cyan
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo Container
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF7C3AED), // Purple
+                      Color(0xFF00BCD4), // Cyan
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.handyman_outlined,
-                color: Colors.white,
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFF00BCD4)],
-              ).createShader(bounds),
-              child: const Text(
-                'SmartLabour',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                      blurRadius: 30,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 15),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.handyman_rounded,
                   color: Colors.white,
+                  size: 60,
                 ),
               ),
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(color: Color(0xFF00BCD4)),
-          ],
+              const SizedBox(height: 32),
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Color(0xFF7C3AED), Color(0xFF00BCD4)],
+                ).createShader(bounds),
+                child: const Text(
+                  'SmartLabour',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Quality Work, Right Away',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 60),
+              const CircularProgressIndicator(
+                color: Color(0xFF00BCD4),
+                strokeWidth: 3,
+              ),
+            ],
+          ),
         ),
       ),
     );

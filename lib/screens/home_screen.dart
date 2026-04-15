@@ -14,6 +14,7 @@ import 'verification_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'create_job_screen.dart';
 import 'job_feed_screen.dart';
+import 'notifications_screen.dart';
 import '../services/job_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,13 +27,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  static final List<Widget> _widgetOptions = <Widget>[
-    const HomeScreenBody(),
-    AuthService().currentUser?.role == 'Worker' ? const JobFeedScreen() : const SearchScreen(),
-    const JobsScreen(),
-    const MessagesScreen(),
-    const ProfileScreen(),
-  ];
+  List<Widget> get _widgetOptions => <Widget>[
+        const HomeScreenBody(),
+        AuthService().currentUser?.role == 'Worker'
+            ? const JobFeedScreen()
+            : const SearchScreen(),
+        const JobsScreen(),
+        const MessagesScreen(),
+        const ProfileScreen(),
+      ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -670,31 +673,39 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
   }
 
   Widget _buildNotificationIcon() {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFF8E1),
-        shape: BoxShape.circle,
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Icon(Icons.notifications_outlined, color: Colors.black87),
-          Positioned(
-            top: 10,
-            right: 12,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: Colors.amber,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        );
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: Color(0xFFFFF8E1),
+          shape: BoxShape.circle,
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(Icons.notifications_outlined, color: Colors.black87),
+            Positioned(
+              top: 10,
+              right: 12,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Colors.amber,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

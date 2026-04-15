@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:icons_plus/icons_plus.dart';
 import '../screens/signup_screen.dart';
 import '../screens/forget_password_screen.dart';
 import '../screens/home_screen.dart';
@@ -232,71 +231,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 32),
-
-                // OR Divider
-                Row(
-                  children: [
-                    Expanded(
-                      child: Divider(color: Colors.grey.withValues(alpha: 0.2)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'Or continue with',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ),
-                    Expanded(
-                      child: Divider(color: Colors.grey.withValues(alpha: 0.2)),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 32),
-
-                // Google Sign In
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : _handleGoogleSignIn,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: Colors.grey.withValues(alpha: 0.2),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      backgroundColor: Colors.white,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Logo(Logos.google, size: 24),
-                        const SizedBox(width: 12),
-                        _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF1A1C18),
-                                ),
-                              )
-                            : const Text(
-                                'Sign in with Google',
-                                style: TextStyle(
-                                  color: Color(0xFF1A1C18),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                      ],
-                    ),
-                  ),
-                ),
-
                 const SizedBox(height: 48),
 
                 // Footer
@@ -382,43 +316,6 @@ class _SignInScreenState extends State<SignInScreen> {
         setState(() {
           _isLoading = false;
         });
-      }
-    }
-  }
-
-  Future<void> _handleGoogleSignIn() async {
-    setState(() => _isLoading = true);
-    try {
-      final result = await AuthService().signInWithGoogle();
-      if (result['success'] && mounted) {
-        final user = AuthService().currentUser;
-        if (user == null || user.role == null || user.role!.isEmpty) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
-            (route) => false,
-          );
-        } else {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
-            (route) => false,
-          );
-        }
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Google Sign In failed')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }

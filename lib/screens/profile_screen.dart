@@ -316,20 +316,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Stack(
                               children: [
-                                CircleAvatar(
-                                  radius: 35,
-                                  backgroundImage: userData['avatarUrl'] != null
-                                      ? NetworkImage(userData['avatarUrl'])
-                                      : const NetworkImage(
-                                          'https://i.pravatar.cc/150?u=profile',
+                                Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 4,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.1,
                                         ),
-                                  backgroundColor: Colors.grey[200],
+                                        blurRadius: 10,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 40,
+                                    backgroundImage:
+                                        userData['avatarUrl'] != null
+                                            ? NetworkImage(
+                                              userData['avatarUrl'],
+                                            )
+                                            : const NetworkImage(
+                                              'https://i.pravatar.cc/150?u=profile',
+                                            ),
+                                    backgroundColor: Colors.grey[200],
+                                  ),
                                 ),
                                 if (_isUploading)
                                   const Positioned.fill(
                                     child: Center(
                                       child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                                        strokeWidth: 3,
+                                        color: Color(0xFF00BCD4),
                                       ),
                                     ),
                                   ),
@@ -341,13 +363,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ? null
                                         : _pickAndUploadImage,
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF00BCD4),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF00BCD4),
                                         shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
                                       ),
                                       child: const Icon(
-                                        Icons.camera_alt,
+                                        Icons.edit,
                                         size: 16,
                                         color: Colors.white,
                                       ),

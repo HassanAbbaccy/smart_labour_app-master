@@ -43,3 +43,23 @@ app.*.map.json
 node_modules/
 functions/node_modules/
 .firebase/
+# VS Code
+.vscode/
+
+# Android build and properties
+android/build/
+android/local.properties
+android/key.properties
+*.keystore
+*.jks
+
+# Unused Flutter platform folders
+linux/
+macos/
+windows/
+
+# Flutter/Dart plugins and packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.dart_tool/

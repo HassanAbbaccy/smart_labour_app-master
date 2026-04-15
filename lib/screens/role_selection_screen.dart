@@ -209,71 +209,79 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     final isSelected = _selectedRole == value;
     return GestureDetector(
       onTap: () => setState(() => _selectedRole = value),
-      child: Container(
-        padding: const EdgeInsets.all(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFE0F7FA).withValues(alpha: 0.3)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF00BCD4)
-                : Colors.grey.withValues(alpha: 0.2),
-            width: isSelected ? 2 : 1,
+            color: isSelected ? const Color(0xFF00BCD4) : Colors.transparent,
+            width: 2,
           ),
           boxShadow: [
-            if (!isSelected)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
+            BoxShadow(
+              color: isSelected
+                  ? const Color(0xFF00BCD4).withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
         child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF00BCD4)
-                    : const Color(0xFFE0F2F1),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: isSelected
+                      ? [const Color(0xFF00BCD4), const Color(0xFF009688)]
+                      : [const Color(0xFFE0F2F1), const Color(0xFFB2DFDB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(18),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? Colors.white : const Color(0xFF004D40),
-                size: 28,
+                color: isSelected ? Colors.white : const Color(0xFF00796B),
+                size: 32,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1C18),
+                      color: isSelected
+                          ? const Color(0xFF00796B)
+                          : const Color(0xFF1A1C18),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     description,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
             ),
             if (isSelected)
               const Icon(
-                Icons.check_circle,
+                Icons.check_circle_rounded,
                 color: Color(0xFF00BCD4),
-                size: 24,
+                size: 28,
               ),
           ],
         ),

@@ -79,7 +79,7 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
     );
 
     try {
-      await JobService().applyForJob(application);
+      await JobService().applyForJob(application, job.clientId ?? '', job.title);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

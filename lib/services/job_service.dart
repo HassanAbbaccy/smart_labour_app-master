@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/job_model.dart';
+import '../models/notification_model.dart';
+
 
 class JobService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -71,9 +73,29 @@ class JobService {
     await workerRef.update(workerUpdates);
   }
 
-  Future<void> applyForJob(ApplicationModel app) async {
-    // Save to a root 'applications' collection
+  Future<void> applyForJob(ApplicationModel app, String clientId, String jobTitle) async {
+    // 1. Save to a root 'applications' collection
     await _firestore.collection('applications').add(app.toMap());
+
+    // 2. Increment workersOffered in the job document
+    await _firestore.collection('jobs').doc(app.jobId).update({
+      'workersOffered': FieldValue.increment(1),
+    });
+
+    // 3. Create a notification for the client
+    await createNotification(NotificationModel(
+      id: '', // Firestore will generate
+      receiverId: clientId,
+      title: 'New Application',
+      body: '${app.workerName} applied for your job: $jobTitle',
+      type: 'application',
+      timestamp: DateTime.now(),
+      data: {'jobId': app.jobId},
+    ));
+  }
+
+  Future<void> createNotification(NotificationModel notification) async {
+    await _firestore.collection('notifications').add(notification.toMap());
   }
 
   Stream<List<ApplicationModel>> streamJobApplications(String jobId) {

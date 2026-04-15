@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/signin_screen.dart';
 import '../screens/role_selection_screen.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -17,9 +21,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  File? _avatarFile;
+  final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
   bool _agreeToTerms = false;
   bool _obscurePassword = true;
+
+  Future<void> _pickAvatar() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+    if (image != null) {
+      setState(() {
+        _avatarFile = File(image.path);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +89,49 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+
+                // Avatar Picker
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: const Color(0xFFE0F2F1),
+                        backgroundImage:
+                            _avatarFile != null ? FileImage(_avatarFile!) : null,
+                        child:
+                            _avatarFile == null
+                                ? const Icon(
+                                  Icons.person_outline,
+                                  size: 40,
+                                  color: Color(0xFF009688),
+                                )
+                                : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: _pickAvatar,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00BCD4),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
 
                 // Full Name
                 _buildLabel('Full Name'),
@@ -367,13 +427,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       if (result['success'] && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully')),
-        );
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const RoleSelectionScreen()),
-          (route) => false,
-        );
+        final user = result['user'];
+        if (user != null && _avatarFile != null) {
+          // Upload avatar if selected
+          final avatarUrl = await StorageService().uploadFile(
+            file: _avatarFile!,
+            path: 'avatars/${user.uid}.jpg',
+          );
+          if (avatarUrl != null && mounted) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .update({'avatarUrl': avatarUrl});
+          }
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Account created successfully')),
+          );
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const RoleSelectionScreen(),
+            ),
+            (route) => false,
+          );
+        }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result['message'] ?? 'Sign up failed')),
