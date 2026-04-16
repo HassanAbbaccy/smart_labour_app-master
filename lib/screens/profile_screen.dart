@@ -335,14 +335,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   child: CircleAvatar(
                                     radius: 40,
-                                    backgroundImage:
-                                        userData['avatarUrl'] != null
-                                            ? NetworkImage(
-                                              userData['avatarUrl'],
-                                            )
-                                            : const NetworkImage(
-                                              'https://i.pravatar.cc/150?u=profile',
-                                            ),
+                                    backgroundImage: userData['avatarUrl'] != null
+                                        ? NetworkImage(userData['avatarUrl'])
+                                        : const AssetImage('assets/images/user_placeholder.png'),
                                     backgroundColor: Colors.grey[200],
                                   ),
                                 ),

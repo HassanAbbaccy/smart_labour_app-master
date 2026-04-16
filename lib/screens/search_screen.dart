@@ -303,9 +303,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 CircleAvatar(
                   radius: 24,
-                  backgroundImage: NetworkImage(
-                    worker.avatarUrl ??
-                        'https://i.pravatar.cc/150?u=${worker.uid}',
+                  backgroundImage: AssetImage(
+                    'assets/images/user_placeholder.png',
                   ),
                 ),
               ],
@@ -375,9 +374,8 @@ class _SearchScreenState extends State<SearchScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 image: DecorationImage(
-                  image: NetworkImage(
-                    worker.avatarUrl ??
-                        'https://i.pravatar.cc/150?u=${worker.uid}',
+                  image: AssetImage(
+                    'assets/images/user_placeholder.png',
                   ),
                   fit: BoxFit.cover,
                 ),

@@ -208,7 +208,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AppBar(title: Text(label), backgroundColor: Colors.black),
-                  Image.network(url, fit: BoxFit.contain),
+                  Image.asset('assets/images/service_placeholder.png', fit: BoxFit.contain),
                 ],
               ),
             ),
@@ -225,7 +225,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: url != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(url, fit: BoxFit.cover),
+                child: Image.asset('assets/images/service_placeholder.png', fit: BoxFit.cover),
               )
             : Center(child: Text('No $label')),
       ),

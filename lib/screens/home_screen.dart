@@ -177,8 +177,8 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               ),
               const CircleAvatar(
                 radius: 24,
-                backgroundImage: NetworkImage(
-                  'https://i.pravatar.cc/150?u=worker',
+                backgroundImage: AssetImage(
+                  'assets/images/user_placeholder.png',
                 ),
               ),
             ],
@@ -855,9 +855,8 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                 children: [
                   CircleAvatar(
                     radius: 16,
-                    backgroundImage: NetworkImage(
-                      job.workerAvatarUrl ??
-                          'https://i.pravatar.cc/150?u=${job.workerId}',
+                    backgroundImage: AssetImage(
+                      'assets/images/user_placeholder.png',
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -956,9 +955,8 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                             children: [
                               CircleAvatar(
                                 radius: 24,
-                                backgroundImage: NetworkImage(
-                                  job.workerAvatarUrl ??
-                                      'https://i.pravatar.cc/150?u=${job.workerId}',
+                                backgroundImage: AssetImage(
+                                  'assets/images/user_placeholder.png',
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -1367,7 +1365,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   image: DecorationImage(
-                    image: NetworkImage(imageUrl),
+                    image: AssetImage('assets/images/user_placeholder.png'),
                     fit: BoxFit.cover,
                   ),
                 ),

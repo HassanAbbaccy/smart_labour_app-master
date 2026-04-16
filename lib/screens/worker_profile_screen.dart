@@ -212,9 +212,8 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: NetworkImage(
-                        widget.worker.avatarUrl ??
-                            'https://i.pravatar.cc/300?u=${widget.worker.uid}',
+                      image: AssetImage(
+                        'assets/images/user_placeholder.png',
                       ),
                       fit: BoxFit.cover,
                     ),

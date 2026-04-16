@@ -153,9 +153,9 @@ class CategoryResultsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   color: Colors.grey[200],
                   image: DecorationImage(
-                    image: NetworkImage(
-                      'https://i.pravatar.cc/150?u=${worker.uid}',
-                    ), // Using UID for consistency
+                    image: AssetImage(
+                      'assets/images/user_placeholder.png',
+                    ),
                     fit: BoxFit.cover,
                   ),
                 ),

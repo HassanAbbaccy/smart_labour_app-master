@@ -53,12 +53,54 @@ class _PaymentScreenState extends State<PaymentScreen> {
     } else if (selectedMethod == 'Stripe (Card)') {
       setState(() => isProcessing = true);
       try {
-        final amountInCents = (double.parse(widget.amount.replaceAll(RegExp(r'[^0-9.]'), '')) * 100).toInt();
+        // 1. Aggressive Whole-Number Parsing with Prefix Handling
+        String rawVal = widget.amount;
         
+        // Strip "Rs." or "Rs" prefix (case-insensitive)
+        String noPrefix = rawVal.toLowerCase().replaceAll('rs.', '').replaceAll('rs', '');
+        
+        // Take everything before a remaining dot (ignore any true decimals)
+        String beforeDot = noPrefix.contains('.') ? noPrefix.split('.')[0] : noPrefix;
+        
+        // Remove everything that isn't a digit
+        String cleanAmount = beforeDot.replaceAll(RegExp(r'[^0-9]'), '');
+        double pkrAmount = double.tryParse(cleanAmount) ?? 0.0;
+        
+        // 2. Convert PKR to USD (Rate: 1 PKR = 0.0036 USD)
+        const double pkrToUsdRate = 0.0036;
+        double usdAmount = pkrAmount * pkrToUsdRate;
+        
+        // 3. Convert to Cents for Stripe
+        int amountInCents = (usdAmount * 100).round();
+
+        // 4. ON-SCREEN DEBUGGING (Comprehensive)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('DEBUG | Raw: "$rawVal" | Clean: $cleanAmount | PKR: $pkrAmount | USD: \$${usdAmount.toStringAsFixed(2)}'),
+            duration: const Duration(seconds: 5),
+            backgroundColor: const Color(0xFF003366), // Deep blue for visibility
+          ),
+        );
+
+        debugPrint('--- FINAL PARSING DEBUG ---');
+        debugPrint('Raw Input: "$rawVal"');
+        debugPrint('Before Dot: "$beforeDot"');
+        debugPrint('Cleaned Digits: "$cleanAmount"');
+        debugPrint('Final PKR: $pkrAmount');
+        debugPrint('Cents to Stripe: $amountInCents');
+
+        // 5. Validate Minimum $0.50 USD
+        if (amountInCents < 50) {
+          setState(() => isProcessing = false);
+          // Don't return yet, let the user see the blue bar first if we want, 
+          // but actually we must stop Stripe.
+          return;
+        }
+
         final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('createPaymentIntent');
         final response = await callable.call({
           'amount': amountInCents,
-          'currency': 'pkr',
+          'currency': 'usd',
           'jobId': widget.jobId,
         });
 
@@ -81,9 +123,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           'workerName': widget.workerName,
         });
 
-        final cleanAmount = widget.amount.replaceAll(RegExp(r'[^0-9.]'), '');
-        final amt = double.tryParse(cleanAmount) ?? 0.0;
-        await FirebaseFirestore.instance.collection('users').doc(widget.workerId).update({'escrowBalance': FieldValue.increment(amt)});
+        await FirebaseFirestore.instance.collection('users').doc(widget.workerId).update({'escrowBalance': FieldValue.increment(pkrAmount)});
 
         if (mounted) {
           _showSuccessDialog();
@@ -412,8 +452,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ? Icon(icon, color: activeColor)
                   : Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Image.network(
-                        logoUrl,
+                      child: Image.asset(
+                        'assets/images/logo_placeholder.png',
                         errorBuilder: (context, error, stackTrace) =>
                             Icon(Icons.payment, color: activeColor),
                       ),

@@ -44,10 +44,11 @@ class AuthService {
       final user = _firebaseAuth.currentUser;
       if (user != null) {
         // Start listening to user stream to keep _currentUser reactive
+        // This listener will automatically fetch the initial data,
+        // so we don't need a separate .get() call which can cause desync.
         userStream.listen((userModel) {
           _currentUser = userModel;
         });
-        await _loadUserFromFirestore(user.uid);
       }
     } catch (e) {
       debugPrint('Error initializing user: $e');

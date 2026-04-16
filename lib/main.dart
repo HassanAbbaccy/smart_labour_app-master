@@ -6,6 +6,8 @@ import 'firebase_options.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:untitled4/services/auth_service.dart';
 import './theme/theme.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +35,14 @@ void main() async {
       },
     );
     debugPrint('Firebase initialized');
+
+    // Firestore Stability Fix for Web
+    if (kIsWeb) {
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: false,
+      );
+      debugPrint('Firestore configured for Web (Persistence disabled)');
+    }
 
     // Initialize current user with a timeout to prevent hanging the app on startup
     await AuthService().initializeUser().timeout(

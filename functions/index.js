@@ -16,35 +16,48 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
   }
 
   const amount = data.amount;
-  const currency = data.currency || "pkr"; // Assuming PKR by default, Stripe handles PKR. Note: Stripe might require amount in smallest currency unit (e.g. paisa for PKR = amount * 100).
+  const currency = (data.currency || "pkr").toLowerCase();
   const jobId = data.jobId;
 
-  if (!amount) {
-    throw new functions.https.HttpsError("invalid-argument", "Amount is required");
+  console.log(`Payment Request: Amount=${amount}, Currency=${currency}, JobID=${jobId}, UserID=${context.auth.uid}`);
+
+  if (!amount || isNaN(amount)) {
+    throw new functions.https.HttpsError("invalid-argument", "Valid amount is required");
+  }
+
+  // Stripe Minimum Amount Check (approx $0.50 USD equivalent)
+  if (currency === "pkr" && amount < 15000) {
+    throw new functions.https.HttpsError("invalid-argument", "The minimum amount for PKR is Rs. 150");
+  } else if (currency === "usd" && amount < 50) {
+    throw new functions.https.HttpsError("invalid-argument", "The minimum amount for USD is 50 cents");
   }
 
   try {
-    // Note: If you want to save card details for future payments, create a customer first.
-    // We will do a generic ephemeral payment intent.
-
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: parseInt(amount, 10), // e.g., 500000 for 5000 PKR
+      amount: parseInt(amount, 10),
       currency: currency,
       metadata: {
         userId: context.auth.uid,
         jobId: jobId || "unknown",
       },
-      // You can add automatic_payment_methods: { enabled: true }
       automatic_payment_methods: {
         enabled: true,
       },
     });
 
+    console.log(`PaymentIntent Created Success: ID=${paymentIntent.id}`);
+
     return {
       clientSecret: paymentIntent.client_secret,
     };
   } catch (error) {
-    console.error("Stripe Error:", error);
-    throw new functions.https.HttpsError("internal", error.message);
+    console.error("Stripe API Error Details:", JSON.stringify(error, null, 2));
+    
+    // Return the professional Stripe error message back to the client
+    throw new functions.https.HttpsError(
+      "internal", 
+      error.message || "An error occurred while creating the payment intent",
+      error.raw ? error.raw.code : null
+    );
   }
 });

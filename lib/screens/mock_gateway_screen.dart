@@ -138,9 +138,6 @@ class _MockGatewayScreenState extends State<MockGatewayScreen> {
     final bgColor = isJazzCash
         ? const Color(0xFFFFF3E0)
         : const Color(0xFFE8F5E9);
-    final logoUrl = isJazzCash
-        ? 'https://seeklogo.com/images/J/jazz-cash-logo-829841302F-seeklogo.com.png'
-        : 'https://images.seeklogo.com/logo-png/43/1/easypaisa-logo-png_seeklogo-437435.png';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -164,8 +161,8 @@ class _MockGatewayScreenState extends State<MockGatewayScreen> {
                 color: bgColor,
                 borderRadius: BorderRadius.circular(100),
               ),
-              child: Image.network(
-                logoUrl,
+              child: Image.asset(
+                'assets/images/logo_placeholder.png',
                 height: 80,
                 width: 80,
                 errorBuilder: (context, error, stackTrace) =>
