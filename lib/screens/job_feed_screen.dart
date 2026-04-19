@@ -4,6 +4,9 @@ import '../models/job_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/job_service.dart';
+import 'package:animate_do/animate_do.dart';
+import '../widgets/shimmer_loading.dart';
+import '../widgets/empty_state_widget.dart';
 
 class JobFeedScreen extends StatefulWidget {
   const JobFeedScreen({super.key});
@@ -116,11 +119,14 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return _buildFeedShimmer();
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text('No open jobs available right now.'),
+            return const PremiumEmptyState(
+              title: 'No Jobs Available',
+              subtitle:
+                  'Check back later! New opportunities appear here as soon as clients post them.',
+              icon: Icons.work_off_outlined,
             );
           }
 
@@ -134,7 +140,10 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final job = jobs[index];
-              return Container(
+              return FadeInUp(
+                duration: const Duration(milliseconds: 300),
+                delay: Duration(milliseconds: index * 50),
+                child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -229,10 +238,23 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            );
+          },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildFeedShimmer() {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      separatorBuilder: (_, _) => const SizedBox(height: 16),
+      itemBuilder: (_, _) => const ShimmerLoading(
+        isLoading: true,
+        child: ShimmerPlaceholder(height: 120, borderRadius: 16),
       ),
     );
   }

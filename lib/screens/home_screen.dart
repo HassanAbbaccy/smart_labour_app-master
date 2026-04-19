@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:animate_do/animate_do.dart';
+import '../widgets/shimmer_loading.dart';
+import '../widgets/custom_image_view.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/job_model.dart';
 import '../models/user_model.dart';
@@ -95,32 +100,76 @@ class HomeScreenBody extends StatefulWidget {
 class _HomeScreenBodyState extends State<HomeScreenBody> {
   String _currentAddress = 'Gulberg III, Lahore';
   bool _isLoadingLocation = false;
+  StreamSubscription<Position>? _locationSubscription;
+  final LocationService _locationService = LocationService();
 
   @override
   void initState() {
     super.initState();
-    _fetchLocation();
+    _startLocationTracking();
   }
 
-  Future<void> _fetchLocation() async {
+  Future<void> _startLocationTracking() async {
     setState(() => _isLoadingLocation = true);
-    try {
-      final location = await LocationService().getCurrentLocation();
+
+    final hasPermission = await _locationService.checkPermissions();
+    if (!hasPermission) {
       if (mounted) {
         setState(() {
-          _currentAddress = location;
+          _currentAddress = 'Location Permission Denied';
           _isLoadingLocation = false;
         });
+      }
+      return;
+    }
+
+    // Initialize with current position
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      String address = await _locationService.getAddressFromPosition(position);
+      if (mounted) {
+        setState(() {
+          _currentAddress = address;
+          _isLoadingLocation = false;
+        });
+        _syncToFirestore(position, address);
       }
     } catch (e) {
-      debugPrint('Location error: $e');
-      if (mounted) {
-        setState(() {
-          _currentAddress = 'Location Unavailable';
-          _isLoadingLocation = false;
-        });
-      }
+      debugPrint('Initial location fetch failed: $e');
     }
+
+    // Start listening for changes
+    _locationSubscription = _locationService.getPositionStream().listen(
+      (Position position) async {
+        final address = await _locationService.getAddressFromPosition(position);
+        if (mounted) {
+          setState(() {
+            _currentAddress = address;
+          });
+          _syncToFirestore(position, address);
+        }
+      },
+      onError: (error) {
+        debugPrint('Location stream error: $error');
+      },
+    );
+  }
+
+  void _syncToFirestore(Position position, String address) {
+    final user = AuthService().currentUser;
+    if (user != null) {
+      _locationService.updateUserLocation(
+        uid: user.uid,
+        position: position,
+        address: address,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -129,7 +178,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
       stream: AuthService().userStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return _buildHomeShimmer();
         }
 
         final user = snapshot.data;
@@ -138,13 +187,59 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
         }
 
         if (user.role == 'Worker') {
-          return _buildWorkerDashboard(user);
+          return FadeInUp(
+            duration: const Duration(milliseconds: 500),
+            child: _buildWorkerDashboard(user),
+          );
         } else if (user.role == 'Admin') {
           return const AdminDashboardScreen();
         } else {
-          return _buildClientDashboard(user);
+          return FadeInUp(
+            duration: const Duration(milliseconds: 500),
+            child: _buildClientDashboard(user),
+          );
         }
       },
+    );
+  }
+
+  Widget _buildHomeShimmer() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: ShimmerLoading(
+        isLoading: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const ShimmerPlaceholder(height: 14, width: 100),
+                    const SizedBox(height: 8),
+                    const ShimmerPlaceholder(height: 24, width: 150),
+                  ],
+                ),
+                const ShimmerPlaceholder(height: 48, width: 48, borderRadius: 24),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(child: const ShimmerPlaceholder(height: 100)),
+                const SizedBox(width: 12),
+                Expanded(child: const ShimmerPlaceholder(height: 100)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const ShimmerPlaceholder(height: 150),
+            const SizedBox(height: 24),
+            const ShimmerPlaceholder(height: 150),
+          ],
+        ),
+      ),
     );
   }
 
@@ -161,24 +256,31 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Welcome back,',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  FadeInLeft(
+                    child: Text(
+                      'Welcome back,',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
                   ),
-                  Text(
-                    user.firstName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1C18),
+                  FadeInLeft(
+                    delay: const Duration(milliseconds: 100),
+                    child: Text(
+                      user.firstName,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1C18),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const CircleAvatar(
-                radius: 24,
-                backgroundImage: AssetImage(
-                  'assets/images/user_placeholder.png',
+              FadeInRight(
+                child: CustomImageView(
+                  url: user.avatarUrl,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
                 ),
               ),
             ],
@@ -501,7 +603,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
           children: [
             // Header: Location
             InkWell(
-              onTap: _fetchLocation,
+              onTap: _startLocationTracking,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

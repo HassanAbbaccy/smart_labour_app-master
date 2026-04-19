@@ -6,6 +6,8 @@ import 'package:untitled4/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:untitled4/models/user_model.dart';
+import 'package:animate_do/animate_do.dart';
+import '../widgets/custom_image_view.dart';
 
 class WorkerProfileScreen extends StatefulWidget {
   final UserModel worker;
@@ -209,25 +211,21 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
             flexibleSpace: FlexibleSpaceBar(
               background: Hero(
                 tag: 'widget.worker_image_${widget.worker.uid}',
-                child: Container(
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage(
-                        'assets/images/user_placeholder.png',
-                      ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                child: CustomImageView(
+                  url: widget.worker.avatarUrl,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
           ),
 
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: FadeInUp(
+              duration: const Duration(milliseconds: 500),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -428,8 +426,9 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
+    ),
       bottomSheet: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         decoration: BoxDecoration(

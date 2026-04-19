@@ -4,6 +4,7 @@ import 'package:untitled4/services/auth_service.dart';
 import 'package:untitled4/screens/onboarding_screen.dart'; // Import Onboarding
 import 'package:untitled4/screens/home_screen.dart';
 import 'package:untitled4/screens/role_selection_screen.dart';
+import 'package:untitled4/services/session_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,7 +38,15 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  void _goNext() {
+  void _goNext() async {
+    // Check for session timeout on startup
+    final expired = await SessionService().isSessionExpired();
+    if (expired && AuthService().isAuthenticated) {
+      debugPrint('STARTUP SESSION EXPIRED: Logging out.');
+      await AuthService().signOut();
+    }
+    await SessionService().clearSession();
+
     final isAuth = AuthService().isAuthenticated;
     if (!mounted) return;
     if (!isAuth) {

@@ -48,6 +48,11 @@ dependencies:
   flutter_stripe: ^11.0.0
   flutter_stripe_web: ^6.5.1
   cloud_functions: ^5.6.2
+  shared_preferences: ^2.5.5
+  shimmer: ^3.0.0
+  cached_network_image: ^3.4.1
+  animate_do: ^5.1.0
+  lottie: ^3.3.3
 
 
 dev_dependencies:

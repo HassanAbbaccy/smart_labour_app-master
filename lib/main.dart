@@ -8,6 +8,8 @@ import 'package:untitled4/services/auth_service.dart';
 import './theme/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:untitled4/services/session_service.dart';
+import 'package:untitled4/screens/signin_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,10 +69,56 @@ void main() async {
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.paused) {
+      // App went into background - mark the time
+      await SessionService().markBackgroundTime();
+    } else if (state == AppLifecycleState.resumed) {
+      // App came back - check if we should logout
+      final expired = await SessionService().isSessionExpired();
+      if (expired && AuthService().isAuthenticated) {
+        debugPrint('SESSION EXPIRED: Auto-logging out user.');
+        await AuthService().signOut();
+        await SessionService().clearSession();
+
+        // Redirect to Login if authenticated context exists
+        if (mounted) {
+          // Restart the app from sign in
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const SignInScreen()),
+            (route) => false,
+          );
+        }
+      } else {
+        // Session still valid - clear the timestamp so it doesn't trigger unexpectedly
+        await SessionService().clearSession();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

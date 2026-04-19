@@ -7,6 +7,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:untitled4/screens/dev_tools.dart';
+import 'package:untitled4/screens/help_support_screen.dart';
+import 'package:untitled4/screens/terms_privacy_screen.dart';
+import 'package:untitled4/screens/address_management_screen.dart';
+import 'package:animate_do/animate_do.dart';
+import '../widgets/custom_image_view.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,6 +22,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isUploading = false;
+  bool _isUrdu = false;
 
   Future<void> _pickAndUploadImage() async {
     final picker = ImagePicker();
@@ -275,6 +281,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showLanguageDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_isUrdu ? 'زبان منتخب کریں' : 'Select Language'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('English'),
+              trailing: !_isUrdu
+                  ? const Icon(Icons.check, color: Color(0xFF00BCD4))
+                  : null,
+              onTap: () {
+                setState(() => _isUrdu = false);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Urdu (اردو)'),
+              trailing: _isUrdu
+                  ? const Icon(Icons.check, color: Color(0xFF00BCD4))
+                  : null,
+              onTap: () {
+                setState(() => _isUrdu = true);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final uid = AuthService().firebaseUser?.uid;
@@ -306,341 +346,374 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       userData['phoneNumber'] ?? "+92 300 1234567";
                   final walletBalance = userData['walletBalance'] ?? 0;
 
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Row(
-                          children: [
-                            Stack(
-                              children: [
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 4,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                        blurRadius: 10,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 40,
-                                    backgroundImage: userData['avatarUrl'] != null
-                                        ? NetworkImage(userData['avatarUrl'])
-                                        : const AssetImage('assets/images/user_placeholder.png'),
-                                    backgroundColor: Colors.grey[200],
-                                  ),
-                                ),
-                                if (_isUploading)
-                                  const Positioned.fill(
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                        color: Color(0xFF00BCD4),
-                                      ),
-                                    ),
-                                  ),
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: GestureDetector(
-                                    onTap: _isUploading
-                                        ? null
-                                        : _pickAndUploadImage,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF00BCD4),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.edit,
-                                        size: 16,
+                  return FadeInUp(
+                    duration: const Duration(milliseconds: 500),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header
+                          Row(
+                            children: [
+                              Stack(
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
                                         color: Colors.white,
+                                        width: 4,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          blurRadius: 10,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: CustomImageView(
+                                      url: userData['avatarUrl'],
+                                      width: 80,
+                                      height: 80,
+                                      borderRadius: 40,
+                                    ),
+                                  ),
+                                  if (_isUploading)
+                                    const Positioned.fill(
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 3,
+                                          color: Color(0xFF00BCD4),
+                                        ),
+                                      ),
+                                    ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: GestureDetector(
+                                      onTap: _isUploading
+                                          ? null
+                                          : _pickAndUploadImage,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF00BCD4),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.edit,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  displayName,
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1A1C18),
+                                ],
+                              ),
+                              const SizedBox(width: 16),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    displayName,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1A1C18),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  phoneNumber,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                if (userData['address'] != null &&
-                                    userData['address'].isNotEmpty) ...[
                                   const SizedBox(height: 4),
                                   Text(
-                                    userData['address'],
+                                    phoneNumber,
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey,
                                     ),
                                   ),
-                                ],
-                                const SizedBox(height: 4),
-                                GestureDetector(
-                                  onTap: () => _showEditProfileDialog(userData),
-                                  child: const Text(
-                                    'Edit Profile',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF00BCD4),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Wallet Card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF00BCD4),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(
-                                  0xFF00BCD4,
-                                ).withValues(alpha: 0.3),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'My Wallet Balance',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'PKR ${walletBalance.toString()}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: () {},
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.white
-                                            .withValues(alpha: 0.2),
-                                        foregroundColor: Colors.white,
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      child: const Text('Top Up'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: () {},
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.white
-                                            .withValues(alpha: 0.2),
-                                        foregroundColor: Colors.white,
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      child: const Text('History'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Skills Section
-                        if (userData['skills'] != null &&
-                            (userData['skills'] as List).isNotEmpty) ...[
-                          const Text(
-                            'Professional Skills',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A1C18),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: (userData['skills'] as List)
-                                .map(
-                                  (skill) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF00BCD4,
-                                      ).withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: const Color(
-                                          0xFF00BCD4,
-                                        ).withValues(alpha: 0.2),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      skill.toString(),
+                                  if (userData['address'] != null &&
+                                      userData['address'].isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      userData['address'],
                                       style: const TextStyle(
-                                        color: Color(0xFF009688),
-                                        fontSize: 12,
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 4),
+                                  GestureDetector(
+                                    onTap: () =>
+                                        _showEditProfileDialog(userData),
+                                    child: const Text(
+                                      'Edit Profile',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF00BCD4),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-                                )
-                                .toList(),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Wallet Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00BCD4),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFF00BCD4,
+                                  ).withValues(alpha: 0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'My Wallet Balance',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'PKR ${walletBalance.toString()}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () {},
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.white
+                                              .withValues(alpha: 0.2),
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                        ),
+                                        child: const Text('Top Up'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () {},
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.white
+                                              .withValues(alpha: 0.2),
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                        ),
+                                        child: const Text('History'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 32),
-                        ],
 
-                        // Menu Items
-                        _buildMenuItem(
-                          icon: Icons.location_on_outlined,
-                          title: 'My Addresses',
-                          iconColor: const Color(0xFFE0F2F1),
-                          iconTextColor: const Color(0xFF009688),
-                        ),
-                        _buildMenuItem(
-                          icon: Icons.person_outline,
-                          title: 'Saved Workers',
-                          iconColor: const Color(0xFFF3E5F5),
-                          iconTextColor: Colors.purple,
-                        ),
-                        _buildMenuItem(
-                          icon: Icons.notifications_none_outlined,
-                          title: 'Notifications',
-                          iconColor: const Color(0xFFE3F2FD),
-                          iconTextColor: Colors.blue,
-                        ),
-                        _buildMenuItem(
-                          icon: Icons.language,
-                          title: 'Language',
-                          iconColor: const Color(0xFFFFF3E0),
-                          iconTextColor: Colors.orange,
-                          trailing: const Text(
-                            'English',
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
-                          ),
-                        ),
-                        _buildMenuItem(
-                          icon: Icons.help_outline,
-                          title: 'Help & Support',
-                          iconColor: const Color(0xFFE8F5E9),
-                          iconTextColor: Colors.green,
-                        ),
-                        _buildMenuItem(
-                          icon: Icons.description_outlined,
-                          title: 'Terms & Privacy',
-                          iconColor: const Color(0xFFFFEBEE),
-                          iconTextColor: Colors.red,
-                        ),
-                        if (kDebugMode)
+                          // Skills Section
+                          if (userData['skills'] != null &&
+                              (userData['skills'] as List).isNotEmpty) ...[
+                            const Text(
+                              'Professional Skills',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1A1C18),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: (userData['skills'] as List)
+                                  .map(
+                                    (skill) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF00BCD4,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFF00BCD4,
+                                          ).withValues(alpha: 0.2),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        skill.toString(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF009688),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                            const SizedBox(height: 32),
+                          ],
+
+                          // Menu Items
                           _buildMenuItem(
-                            icon: Icons.developer_mode,
-                            title: 'Dev Tools',
-                            iconColor: Colors.orange.withValues(alpha: 0.1),
-                            iconTextColor: Colors.orange,
+                            icon: Icons.location_on_outlined,
+                            title: _isUrdu ? 'میرے پتے' : 'My Addresses',
+                            iconColor: const Color(0xFFE0F2F1),
+                            iconTextColor: const Color(0xFF009688),
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const DevToolsScreen(),
+                                  builder: (_) => AddressManagementScreen(
+                                    currentAddress: userData['address'] ?? '',
+                                  ),
                                 ),
                               );
                             },
                           ),
+                          _buildMenuItem(
+                            icon: Icons.person_outline,
+                            title: _isUrdu ? 'محفوظ ورکرز' : 'Saved Workers',
+                            iconColor: const Color(0xFFF3E5F5),
+                            iconTextColor: Colors.purple,
+                          ),
+                          _buildMenuItem(
+                            icon: Icons.notifications_none_outlined,
+                            title: _isUrdu ? 'اطلاعات' : 'Notifications',
+                            iconColor: const Color(0xFFE3F2FD),
+                            iconTextColor: Colors.blue,
+                          ),
+                          _buildMenuItem(
+                            icon: Icons.language,
+                            title: _isUrdu ? 'زبان' : 'Language',
+                            iconColor: const Color(0xFFFFF3E0),
+                            iconTextColor: Colors.orange,
+                            trailing: Text(
+                              _isUrdu ? 'اردو' : 'English',
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 14),
+                            ),
+                            onTap: _showLanguageDialog,
+                          ),
+                          _buildMenuItem(
+                            icon: Icons.help_outline,
+                            title: _isUrdu ? 'مدد اور سپورٹ' : 'Help & Support',
+                            iconColor: const Color(0xFFE8F5E9),
+                            iconTextColor: Colors.green,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const HelpSupportScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          _buildMenuItem(
+                            icon: Icons.description_outlined,
+                            title: _isUrdu
+                                ? 'شرائط اور پرائیویسی'
+                                : 'Terms & Privacy',
+                            iconColor: const Color(0xFFFFEBEE),
+                            iconTextColor: Colors.red,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const TermsPrivacyScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          if (kDebugMode)
+                            _buildMenuItem(
+                              icon: Icons.developer_mode,
+                              title: 'Dev Tools',
+                              iconColor: Colors.orange.withValues(alpha: 0.1),
+                              iconTextColor: Colors.orange,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const DevToolsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
 
-                        const SizedBox(height: 24),
-                        _buildMenuItem(
-                          icon: Icons.logout,
-                          title: 'Sign Out',
-                          iconColor: Colors.red.withValues(alpha: 0.1),
-                          iconTextColor: Colors.red,
-                          onTap: () {
-                            AuthService().signOut();
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                builder: (_) => const SignInScreen(),
-                              ),
-                              (route) => false,
-                            );
-                          },
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          _buildMenuItem(
+                            icon: Icons.logout,
+                            title: 'Sign Out',
+                            iconColor: Colors.red.withValues(alpha: 0.1),
+                            iconTextColor: Colors.red,
+                            onTap: () {
+                              AuthService().signOut();
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (_) => const SignInScreen(),
+                                ),
+                                (route) => false,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
               ),
-      ),
+            ),
     );
   }
 
