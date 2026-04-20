@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
+import 'notification_service.dart';
+import 'location_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -48,6 +50,10 @@ class AuthService {
         // so we don't need a separate .get() call which can cause desync.
         userStream.listen((userModel) {
           _currentUser = userModel;
+          if (userModel != null) {
+            NotificationService().saveTokenToFirestore(userModel.uid);
+            LocationService().startLocalTracking(userModel.uid);
+          }
         });
       }
     } catch (e) {
@@ -144,6 +150,7 @@ class AuthService {
   // Sign out user
   Future<void> signOut() async {
     try {
+      LocationService().stopTracking();
       await _firebaseAuth.signOut();
       _currentUser = null;
     } catch (e) {

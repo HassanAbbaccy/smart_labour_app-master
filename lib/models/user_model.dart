@@ -25,6 +25,10 @@ class UserModel {
   final List<String> verificationDocuments;
   final String? cnicFrontUrl;
   final String? cnicBackUrl;
+  final String? fcmToken;
+  final double? lastLatitude;
+  final double? lastLongitude;
+  double? tempDistance; // Transient field for search results
 
   UserModel({
     required this.uid,
@@ -53,6 +57,9 @@ class UserModel {
     this.verificationDocuments = const [],
     this.cnicFrontUrl,
     this.cnicBackUrl,
+    this.fcmToken,
+    this.lastLatitude,
+    this.lastLongitude,
   });
 
   String get fullName => '$firstName $lastName';
@@ -87,6 +94,9 @@ class UserModel {
       ),
       cnicFrontUrl: map['cnicFrontUrl'],
       cnicBackUrl: map['cnicBackUrl'],
+      fcmToken: map['fcmToken'],
+      lastLatitude: (map['lastLatitude'] ?? 0.0).toDouble(),
+      lastLongitude: (map['lastLongitude'] ?? 0.0).toDouble(),
     );
   }
 
@@ -117,6 +127,9 @@ class UserModel {
       'verificationDocuments': verificationDocuments,
       'cnicFrontUrl': cnicFrontUrl,
       'cnicBackUrl': cnicBackUrl,
+      'fcmToken': fcmToken,
+      'lastLatitude': lastLatitude,
+      'lastLongitude': lastLongitude,
     };
   }
 }

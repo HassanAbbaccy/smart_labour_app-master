@@ -3,6 +3,8 @@ import '../models/job_model.dart';
 import '../services/job_service.dart';
 import '../services/auth_service.dart';
 import 'job_applicants_screen.dart';
+import 'package:intl/intl.dart';
+import '../services/localization_service.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final JobModel? job;
@@ -251,7 +253,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAF3),
       appBar: AppBar(
-        title: Text(j?.title ?? 'Job Detail'),
+        title: Text(j?.title ?? tr('job_details')),
         backgroundColor: const Color(0xFF009688),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -324,15 +326,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ),
                             ],
                           ),
+                          if (j.scheduledAt != null) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_month, size: 18, color: Color(0xFF009688)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${tr('schedule_job')}: ${DateFormat('MMM dd, hh:mm a').format(j.scheduledAt!)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF00BCD4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
                     const SizedBox(height: 32),
                     
                     // Description Section
-                    const Text(
-                      'Job Description',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Text(
+                      tr('description'),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -387,9 +405,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           icon: const Icon(Icons.check_circle),
-          label: const Text(
-            'Mark Completed',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          label: Text(
+            tr('mark_completed'),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         );
       }

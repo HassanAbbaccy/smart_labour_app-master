@@ -27,10 +27,17 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
   Future<void> _fetchCurrentLocation() async {
     try {
-      final loc = await LocationService().getCurrentLocation();
+      // First try grabbing the already tracked location from the service
+      String current = LocationService().currentAddress.value;
+      
+      if (current.contains('Detecting') || current.contains('Denied')) {
+        // If not available yet, do a fresh fetch
+        current = await LocationService().getCurrentLocation();
+      }
+
       if (mounted) {
         setState(() {
-          _locationController.text = loc;
+          _locationController.text = current;
         });
       }
     } catch (e) {

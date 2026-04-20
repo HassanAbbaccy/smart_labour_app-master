@@ -1,9 +1,21 @@
+import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 class LocationService {
+  static final LocationService _instance = LocationService._internal();
+  factory LocationService() => _instance;
+  LocationService._internal();
+
+  final ValueNotifier<Position?> currentPosition = ValueNotifier<Position?>(null);
+  final ValueNotifier<String> currentAddress = ValueNotifier<String>('Detecting Location...');
+  
+  StreamSubscription<Position>? _positionStreamSubscription;
+  Position? _lastSyncedPosition;
+  static const double _syncThresholdMeters = 50.0;
+
   // Check and request permissions
   Future<bool> checkPermissions() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -20,30 +32,78 @@ class LocationService {
     return true;
   }
 
-  // One-time fetch (for compatibility)
+  // One-time fetch (for convenience)
   Future<String> getCurrentLocation() async {
-    try {
-      final hasPermission = await checkPermissions();
-      if (!hasPermission) return 'Permission Denied';
+    final hasPermission = await checkPermissions();
+    if (!hasPermission) return 'Permission Denied';
 
+    try {
       Position position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
-      
       return await getAddressFromPosition(position);
     } catch (e) {
       return 'Location Error';
     }
   }
 
-  // Get a stream of location updates
-  Stream<Position> getPositionStream() {
-    return Geolocator.getPositionStream(
+  // Start global tracking
+  Future<void> startLocalTracking(String? uid) async {
+    final hasPermission = await checkPermissions();
+    if (!hasPermission) {
+      currentAddress.value = 'Location Permission Denied';
+      return;
+    }
+
+    // Initial fetch
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      _updateLocalState(position, uid);
+    } catch (e) {
+      debugPrint('Initial location fetch error: $e');
+    }
+
+    // Listen for updates
+    _positionStreamSubscription?.cancel();
+    _positionStreamSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 10, // Update every 10 meters
+        distanceFilter: 10,
       ),
+    ).listen(
+      (Position position) => _updateLocalState(position, uid),
+      onError: (e) => debugPrint('Location stream error: $e'),
     );
+  }
+
+  void stopTracking() {
+    _positionStreamSubscription?.cancel();
+    _positionStreamSubscription = null;
+  }
+
+  Future<void> _updateLocalState(Position position, String? uid) async {
+    currentPosition.value = position;
+    
+    // Reverse geocode to get address
+    final address = await getAddressFromPosition(position);
+    currentAddress.value = address;
+
+    // Sync to Firestore if threshold met
+    if (uid != null) {
+      if (_lastSyncedPosition == null || 
+          Geolocator.distanceBetween(
+            _lastSyncedPosition!.latitude, 
+            _lastSyncedPosition!.longitude, 
+            position.latitude, 
+            position.longitude
+          ) > _syncThresholdMeters) {
+        
+        _lastSyncedPosition = position;
+        updateUserLocation(uid: uid, position: position, address: address);
+      }
+    }
   }
 
   // Geocode a specific position
@@ -79,6 +139,7 @@ class LocationService {
         'address': address,
         'locationUpdatedAt': FieldValue.serverTimestamp(),
       });
+      debugPrint('Firestore location synced: $address');
     } catch (e) {
       debugPrint('Firestore location sync error: $e');
     }

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_labour/models/user_model.dart';
 import 'package:smart_labour/screens/worker_profile_screen.dart';
+import 'package:geolocator/geolocator.dart';
+import '../services/auth_service.dart';
+import '../services/localization_service.dart';
+import '../services/location_service.dart';
 import '../widgets/custom_image_view.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -111,154 +115,188 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
 
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .where('role', isEqualTo: 'Worker')
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+              child: ValueListenableBuilder<Position?>(
+                valueListenable: LocationService().currentPosition,
+                builder: (context, currentPos, child) {
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .where('role', isEqualTo: 'Worker')
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return _buildEmptyState('No workers available.');
-                  }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return _buildEmptyState('No workers available.');
+                      }
 
-                  final allWorkers = snapshot.data!.docs.map((doc) {
-                    return UserModel.fromMap(
-                      doc.data() as Map<String, dynamic>,
-                      doc.id,
-                    );
-                  }).toList();
+                      final allWorkers = snapshot.data!.docs.map((doc) {
+                        final worker = UserModel.fromMap(
+                          doc.data() as Map<String, dynamic>,
+                          doc.id,
+                        );
+                        
+                        // Calculate distance if client position is available
+                        final currentUser = AuthService().currentUser;
+                        if (currentUser != null &&
+                            worker.lastLatitude != null &&
+                            worker.lastLongitude != null) {
+                          
+                          // Prioritize real-time local position over Firestore profile data
+                          final lat = currentPos?.latitude ?? currentUser.lastLatitude;
+                          final lng = currentPos?.longitude ?? currentUser.lastLongitude;
 
-                  // Filter workers based on query and filter
-                  final filteredWorkers = allWorkers.where((worker) {
-                    bool matchesFilter = true;
-                    if (_selectedFilter == 'Electrician') {
-                      matchesFilter = worker.profession.toLowerCase().contains(
-                        'electric',
-                      );
-                    } else if (_selectedFilter == 'Plumber') {
-                      matchesFilter = worker.profession.toLowerCase().contains(
-                        'plumb',
-                      );
-                    } else if (_selectedFilter == 'Rating 4.5+') {
-                      matchesFilter = worker.rating >= 4.5;
-                    }
+                          if (lat != null && lng != null) {
+                            double distanceInMeters = Geolocator.distanceBetween(
+                              lat,
+                              lng,
+                              worker.lastLatitude!,
+                              worker.lastLongitude!,
+                            );
+                            worker.tempDistance = distanceInMeters / 1000.0;
+                          }
+                        } else {
+                          worker.tempDistance = double.maxFinite;
+                        }
+                        
+                        return worker;
+                      }).toList();
 
-                    bool matchesSearch = true;
-                    if (_searchQuery.isNotEmpty) {
-                      matchesSearch =
-                          worker.fullName.toLowerCase().contains(
-                            _searchQuery,
-                          ) ||
-                          worker.profession.toLowerCase().contains(
-                            _searchQuery,
-                          ) ||
-                          worker.skills.any(
-                            (s) => s.toLowerCase().contains(_searchQuery),
-                          );
-                    }
-                    return matchesFilter && matchesSearch;
-                  }).toList();
+                      // Client-side filtering
+                      final filteredWorkers = allWorkers.where((worker) {
+                        // Filter by professional category if selected
+                        bool matchesFilter = true;
+                        if (_selectedFilter != 'All') {
+                          if (_selectedFilter == 'Rating 4.5+') {
+                            matchesFilter = worker.rating >= 4.5;
+                          } else {
+                            matchesFilter = worker.profession == _selectedFilter;
+                          }
+                        }
 
-                  // Featured Workers (Rating >= 4.5)
-                  final featuredWorkers = filteredWorkers
-                      .where((w) => w.rating >= 4.5)
-                      .toList();
+                        // Filter by search query
+                        bool matchesSearch = true;
+                        if (_searchQuery.isNotEmpty) {
+                          matchesSearch = worker.fullName
+                                  .toLowerCase()
+                                  .contains(_searchQuery) ||
+                              worker.profession
+                                  .toLowerCase()
+                                  .contains(_searchQuery) ||
+                              worker.skills.any(
+                                (s) => s.toLowerCase().contains(_searchQuery),
+                              );
+                        }
+                        return matchesFilter && matchesSearch;
+                      }).toList();
 
-                  return SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (featuredWorkers.isNotEmpty &&
-                            _searchQuery.isEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Featured Workers',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                      // Sort by distance
+                      filteredWorkers.sort((a, b) => (a.tempDistance ?? double.maxFinite)
+                          .compareTo(b.tempDistance ?? double.maxFinite));
+
+                      // Featured Workers (Rating >= 4.5)
+                      final featuredWorkers = filteredWorkers
+                          .where((w) => w.rating >= 4.5)
+                          .toList();
+
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (featuredWorkers.isNotEmpty &&
+                                _searchQuery.isEmpty) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber[600],
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'AD',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      tr('featured_workers'),
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber[600],
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'AD',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: 160,
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
                               ),
-                              scrollDirection: Axis.horizontal,
-                              itemCount: featuredWorkers.length,
-                              separatorBuilder: (context, index) =>
-                                  const SizedBox(width: 12),
-                              itemBuilder: (context, index) {
-                                final colors = [
-                                  const Color(0xFF004D40), // Dark Green
-                                  const Color(0xFF1565C0), // Blue
-                                  const Color(0xFF4527A0), // Purple
-                                  const Color(0xFFBF360C), // Deep Orange
-                                ];
-                                return _buildFeaturedCard(
-                                  featuredWorkers[index],
-                                  colors[index % colors.length],
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                height: 160,
+                                child: ListView.separated(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: featuredWorkers.length,
+                                  separatorBuilder: (context, index) =>
+                                      const SizedBox(width: 12),
+                                  itemBuilder: (context, index) {
+                                    final colors = [
+                                      const Color(0xFF006064),
+                                      const Color(0xFF009688),
+                                      const Color(0xFF546E7A),
+                                    ];
+                                    return _buildFeaturedCard(
+                                      featuredWorkers[index],
+                                      colors[index % colors.length],
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                            ],
 
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: const Text(
-                            'Nearby Professionals',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                            // All Workers
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                              ),
+                              child: Text(
+                                _searchQuery.isEmpty
+                                    ? tr('nearby_workers')
+                                    : tr('search_results'),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 16),
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: filteredWorkers.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) =>
+                                  _buildNearbyCard(filteredWorkers[index]),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filteredWorkers.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            return _buildNearbyCard(filteredWorkers[index]);
-                          },
-                        ),
-                        const SizedBox(height: 80),
-                      ],
-                    ),
+                      );
+                    },
                   );
                 },
               ),
@@ -297,17 +335,17 @@ class _SearchScreenState extends State<SearchScreen> {
                     color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
-                    'Top Rated',
-                    style: TextStyle(color: Color(0xFF4DB6AC), fontSize: 12),
+                  child: Text(
+                    tr('top_rated'),
+                    style: const TextStyle(color: Color(0xFF4DB6AC), fontSize: 12),
                   ),
                 ),
-                  CustomImageView(
-                    url: worker.avatarUrl,
-                    width: 50,
-                    height: 50,
-                    borderRadius: 25,
-                  ),
+                CustomImageView(
+                  url: worker.avatarUrl,
+                  width: 50,
+                  height: 50,
+                  borderRadius: 25,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -369,17 +407,13 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                image: DecorationImage(
-                  image: AssetImage(
-                    'assets/images/user_placeholder.png',
-                  ),
-                  fit: BoxFit.cover,
-                ),
+            Hero(
+              tag: 'worker_image_${worker.uid}',
+              child: CustomImageView(
+                url: worker.avatarUrl,
+                width: 70,
+                height: 70,
+                borderRadius: 12,
               ),
             ),
             const SizedBox(width: 12),
@@ -445,26 +479,27 @@ class _SearchScreenState extends State<SearchScreen> {
                           fontSize: 12,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text('•', style: TextStyle(color: Colors.grey)),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '1.2 km',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
+                      if (worker.tempDistance != null &&
+                          worker.tempDistance != double.maxFinite) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.location_on, color: Colors.grey, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${worker.tempDistance!.toStringAsFixed(1)} ${tr('km_away')}',
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
                       const Spacer(),
                       ElevatedButton(
                         onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => WorkerProfileScreen(worker: worker),
-                          ),
+                              builder: (_) => WorkerProfileScreen(worker: worker)),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00BCD4),
-                          foregroundColor: Colors.white,
+                          backgroundColor: const Color(0xFFE0F2F1),
+                          foregroundColor: const Color(0xFF009688),
                           elevation: 0,
-                          minimumSize: const Size(60, 30),
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),

@@ -10,6 +10,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smart_labour/services/session_service.dart';
 import 'package:smart_labour/screens/signin_screen.dart';
+import 'package:smart_labour/services/notification_service.dart';
+import 'package:smart_labour/services/localization_service.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +56,9 @@ void main() async {
         debugPrint('User initialization timed out');
       },
     );
+
+    // Initialize Push Notifications
+    await NotificationService().initialize();
 
     runApp(const MyApp());
   } catch (e) {
@@ -121,11 +127,26 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'SmartLabour Marketplace',
-      theme: lightMode,
-      home: const SplashScreen(),
+    return ValueListenableBuilder<String>(
+      valueListenable: LocalizationService().localeNotifier,
+      builder: (context, locale, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'SmartLabour Marketplace',
+          theme: lightMode,
+          locale: Locale(locale),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en', ''),
+            Locale('ur', ''),
+          ],
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }

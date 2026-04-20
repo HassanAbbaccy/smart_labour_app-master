@@ -14,6 +14,7 @@ import 'package:smart_labour/screens/withdrawal_screen.dart';
 import 'package:animate_do/animate_do.dart';
 import '../models/user_model.dart';
 import '../widgets/custom_image_view.dart';
+import '../services/localization_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -25,6 +26,12 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isUploading = false;
   bool _isUrdu = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isUrdu = LocalizationService().currentLocale == 'ur';
+  }
 
   Future<void> _pickAndUploadImage() async {
     final picker = ImagePicker();
@@ -283,39 +290,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showLanguageDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_isUrdu ? 'زبان منتخب کریں' : 'Select Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('English'),
-              trailing: !_isUrdu
-                  ? const Icon(Icons.check, color: Color(0xFF00BCD4))
-                  : null,
-              onTap: () {
-                setState(() => _isUrdu = false);
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('Urdu (اردو)'),
-              trailing: _isUrdu
-                  ? const Icon(Icons.check, color: Color(0xFF00BCD4))
-                  : null,
-              onTap: () {
-                setState(() => _isUrdu = true);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -472,7 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           // Wallet Balance
                           _buildBalanceCard(
-                            title: 'My Wallet Balance',
+                            title: tr('wallet_balance'),
                             subtitle: 'Tap to withdraw funds',
                             amount: walletBalance,
                             color: const Color(0xFF009688),
@@ -560,7 +534,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           // Menu Items
                           _buildMenuItem(
                             icon: Icons.location_on_outlined,
-                            title: _isUrdu ? 'میرے پتے' : 'My Addresses',
+                            title: tr('location'),
                             iconColor: const Color(0xFFE0F2F1),
                             iconTextColor: const Color(0xFF009688),
                             onTap: () {
@@ -575,28 +549,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             },
                           ),
                           _buildMenuItem(
-                            icon: Icons.person_outline,
-                            title: _isUrdu ? 'محفوظ ورکرز' : 'Saved Workers',
-                            iconColor: const Color(0xFFF3E5F5),
-                            iconTextColor: Colors.purple,
-                          ),
-                          _buildMenuItem(
-                            icon: Icons.notifications_none_outlined,
-                            title: _isUrdu ? 'اطلاعات' : 'Notifications',
-                            iconColor: const Color(0xFFE3F2FD),
-                            iconTextColor: Colors.blue,
-                          ),
-                          _buildMenuItem(
                             icon: Icons.language,
-                            title: _isUrdu ? 'زبان' : 'Language',
+                            title: tr('language'),
                             iconColor: const Color(0xFFFFF3E0),
                             iconTextColor: Colors.orange,
-                            trailing: Text(
-                              _isUrdu ? 'اردو' : 'English',
-                              style: const TextStyle(
-                                  color: Colors.grey, fontSize: 14),
+                            trailing: Switch(
+                              value: _isUrdu,
+                              onChanged: (value) {
+                                setState(() {
+                                  _isUrdu = value;
+                                });
+                                LocalizationService().setLocale(value ? 'ur' : 'en');
+                              },
+                              activeThumbColor: const Color(0xFF009688),
                             ),
-                            onTap: _showLanguageDialog,
                           ),
                           _buildMenuItem(
                             icon: Icons.help_outline,

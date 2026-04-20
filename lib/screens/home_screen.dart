@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'package:animate_do/animate_do.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/custom_image_view.dart';
@@ -22,6 +21,7 @@ import 'job_detail_screen.dart';
 import 'job_feed_screen.dart';
 import 'notifications_screen.dart';
 import '../services/job_service.dart';
+import '../services/localization_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,28 +62,28 @@ class _HomeScreenState extends State<HomeScreen> {
         type: BottomNavigationBarType.fixed,
         showUnselectedLabels: true,
         items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home_outlined),
+            activeIcon: const Icon(Icons.home),
+            label: tr('home'),
           ),
           AuthService().currentUser?.role == 'Worker'
-              ? const BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed), label: 'Feed')
-              : const BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
-            label: 'Jobs',
+              ? BottomNavigationBarItem(icon: const Icon(Icons.dynamic_feed), label: tr('feed'))
+              : BottomNavigationBarItem(icon: const Icon(Icons.search), label: tr('search')),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.work_outline),
+            activeIcon: const Icon(Icons.work),
+            label: tr('jobs'),
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: 'Chat',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.chat_bubble_outline),
+            activeIcon: const Icon(Icons.chat_bubble),
+            label: tr('chat'),
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person_outline),
+            activeIcon: const Icon(Icons.person),
+            label: tr('profile'),
           ),
         ],
       ),
@@ -99,78 +99,17 @@ class HomeScreenBody extends StatefulWidget {
 }
 
 class _HomeScreenBodyState extends State<HomeScreenBody> {
-  String _currentAddress = 'Gulberg III, Lahore';
-  bool _isLoadingLocation = false;
-  StreamSubscription<Position>? _locationSubscription;
   final LocationService _locationService = LocationService();
 
   @override
   void initState() {
     super.initState();
-    _startLocationTracking();
+    // Tracking is now started by AuthService, results available in _locationService notifiers
   }
 
-  Future<void> _startLocationTracking() async {
-    setState(() => _isLoadingLocation = true);
-
-    final hasPermission = await _locationService.checkPermissions();
-    if (!hasPermission) {
-      if (mounted) {
-        setState(() {
-          _currentAddress = 'Location Permission Denied';
-          _isLoadingLocation = false;
-        });
-      }
-      return;
-    }
-
-    // Initialize with current position
-    try {
-      Position position = await Geolocator.getCurrentPosition();
-      String address = await _locationService.getAddressFromPosition(position);
-      if (mounted) {
-        setState(() {
-          _currentAddress = address;
-          _isLoadingLocation = false;
-        });
-        _syncToFirestore(position, address);
-      }
-    } catch (e) {
-      debugPrint('Initial location fetch failed: $e');
-    }
-
-    // Start listening for changes
-    _locationSubscription = _locationService.getPositionStream().listen(
-      (Position position) async {
-        final address = await _locationService.getAddressFromPosition(position);
-        if (mounted) {
-          setState(() {
-            _currentAddress = address;
-          });
-          _syncToFirestore(position, address);
-        }
-      },
-      onError: (error) {
-        debugPrint('Location stream error: $error');
-      },
-    );
-  }
-
-  void _syncToFirestore(Position position, String address) {
+  void _reTriggerTracking() {
     final user = AuthService().currentUser;
-    if (user != null) {
-      _locationService.updateUserLocation(
-        uid: user.uid,
-        position: position,
-        address: address,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _locationSubscription?.cancel();
-    super.dispose();
+    _locationService.startLocalTracking(user?.uid);
   }
 
   @override
@@ -259,7 +198,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                 children: [
                   FadeInLeft(
                     child: Text(
-                      'Welcome back,',
+                      tr('welcome_back'),
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ),
@@ -718,7 +657,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
           children: [
             // Header: Location
             InkWell(
-              onTap: _startLocationTracking,
+              onTap: _reTriggerTracking,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -730,71 +669,79 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                       const SizedBox(height: 4),
-                      GestureDetector(
-                        onTap: _currentAddress.contains('Denied')
-                            ? () => Geolocator.openAppSettings()
-                            : null,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _currentAddress.contains('Denied')
-                                  ? Icons.location_off
-                                  : Icons.location_on_outlined,
-                              color: const Color(0xFF00BCD4),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                _currentAddress,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 16.0,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF00BCD4),
+                      ValueListenableBuilder<String>(
+                        valueListenable: _locationService.currentAddress,
+                        builder: (context, address, child) {
+                          final isDenied = address.contains('Denied');
+                          final isLoading = address.contains('Detecting');
+                          
+                          return GestureDetector(
+                            onTap: isDenied
+                                ? () => Geolocator.openAppSettings()
+                                : null,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isDenied
+                                      ? Icons.location_off
+                                      : Icons.location_on_outlined,
+                                  color: const Color(0xFF00BCD4),
+                                  size: 20,
                                 ),
-                              ),
-                            ),
-                            if (_isLoadingLocation)
-                              const Padding(
-                                padding: EdgeInsets.only(left: 8),
-                                child: SizedBox(
-                                  width: 12,
-                                  height: 12,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              )
-                            else if (_currentAddress.contains('Denied'))
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF00BCD4),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text(
-                                    'FIX',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    address,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 16.0,
                                       fontWeight: FontWeight.bold,
+                                      color: Color(0xFF00BCD4),
                                     ),
                                   ),
                                 ),
-                              )
-                            else
-                              Icon(
-                                Icons.keyboard_arrow_down,
-                                color: Colors.grey[400],
-                                size: 20,
-                              ),
-                          ],
-                        ),
+                                if (isLoading)
+                                  const Padding(
+                                    padding: EdgeInsets.only(left: 8),
+                                    child: SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
+                                else if (isDenied)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF00BCD4),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Text(
+                                        'FIX',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: Colors.grey[400],
+                                    size: 20,
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -850,12 +797,13 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader(
-                      'Recent Activity',
-                      actionLabel: 'History',
-                      onTap: () {
-                        // Navigate to Jobs tab or history
-                      },
+                    Text(
+                      tr('recent_activity'),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1C18),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     if (job != null)
@@ -896,36 +844,47 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             ),
 
             // Categories
-            _buildSectionHeader(
-              'Categories',
-              actionLabel: 'See All',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const CategoryResultsScreen(category: 'All'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  tr('categories'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1C18),
                   ),
-                );
-              },
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CategoryResultsScreen(category: 'More'),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    tr('see_all'),
+                    style: const TextStyle(color: Color(0xFF009688)),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             _buildCategoriesGrid(),
             const SizedBox(height: 24.0),
 
             // Top Rated Workers
-            _buildSectionHeader(
-              'Top Rated Workers',
-              actionLabel: 'See All',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const CategoryResultsScreen(category: 'All'),
-                  ),
-                );
-              },
+            FadeInLeft(
+              child: Text(
+                tr('nearby_workers'),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1C18),
+                ),
+              ),
             ),
             const SizedBox(height: 16.0),
             _buildTopRatedWorkers(),
@@ -1035,33 +994,6 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     );
   }
 
-  Widget _buildSectionHeader(
-    String title, {
-    String? actionLabel,
-    VoidCallback? onTap,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 20.0,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1C18),
-          ),
-        ),
-        if (actionLabel != null)
-          TextButton(
-            onPressed: onTap,
-            child: Text(
-              actionLabel,
-              style: const TextStyle(color: Color(0xFF00BCD4)),
-            ),
-          ),
-      ],
-    );
-  }
 
   Widget _buildRecentActivityCard(JobModel job) {
     final timeStr = job.createdAt != null
