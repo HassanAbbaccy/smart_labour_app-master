@@ -4,6 +4,8 @@ import '../screens/forget_password_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/role_selection_screen.dart';
 import '../screens/onboarding_screen.dart';
+import 'admin_login_screen.dart';
+import 'admin_dashboard_screen.dart';
 import '../services/auth_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -260,6 +262,21 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 32),
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+                      );
+                    },
+                    child: const Text(
+                      'Administrator Portal',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
               ],
             ),
@@ -287,7 +304,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
       if (result['success'] && mounted) {
         final role = authService.currentUser?.role;
-        if (role == null || role.isEmpty) {
+        if (role == 'Admin') {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+            (route) => false,
+          );
+        } else if (role == null || role.isEmpty) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (context) => const RoleSelectionScreen(),

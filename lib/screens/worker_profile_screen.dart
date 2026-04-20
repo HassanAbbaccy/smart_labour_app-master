@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:smart_labour/services/message_service.dart';
 import 'package:smart_labour/screens/chat_screen.dart';
 import 'package:smart_labour/screens/payment_screen.dart';
@@ -355,6 +356,11 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
 
                   const SizedBox(height: 32),
 
+                  // Reviews Section
+                  _buildReviewsSection(),
+
+                  const SizedBox(height: 32),
+
                   // Hiring Options Section
                   const Text(
                     'Hiring Options',
@@ -544,6 +550,112 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildReviewsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Client Reviews',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1A1C18),
+          ),
+        ),
+        const SizedBox(height: 16),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('reviews')
+              .where('workerId', isEqualTo: widget.worker.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'No reviews yet. Be the first to hire and rate!',
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+              );
+            }
+
+            final reviews = snapshot.data!.docs;
+            // Client-side sort to avoid index issues
+            final sortedReviews = reviews.toList();
+            sortedReviews.sort((a, b) {
+              final aTime = (a.data() as Map)['createdAt'] as Timestamp?;
+              final bTime = (b.data() as Map)['createdAt'] as Timestamp?;
+              return (bTime ?? Timestamp.now()).compareTo(aTime ?? Timestamp.now());
+            });
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: sortedReviews.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final reviewData = sortedReviews[index].data() as Map<String, dynamic>;
+                final rating = (reviewData['rating'] ?? 0) as int;
+                final text = reviewData['reviewText'] ?? '';
+                final timestamp = reviewData['createdAt'] as Timestamp?;
+                final dateStr = timestamp != null
+                    ? DateFormat('MMM dd, yyyy').format(timestamp.toDate())
+                    : 'Recently';
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: List.generate(5, (starIndex) {
+                              return Icon(
+                                starIndex < rating ? Icons.star : Icons.star_border,
+                                color: Colors.amber,
+                                size: 16,
+                              );
+                            }),
+                          ),
+                          Text(
+                            dateStr,
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      if (text.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          text,
+                          style: TextStyle(color: Colors.grey[800], fontSize: 14),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
     );
   }
 

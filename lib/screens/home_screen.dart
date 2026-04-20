@@ -834,7 +834,11 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               builder: (context, snapshot) {
                 JobModel? job;
                 if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                  final jobs = snapshot.data!.docs.map((d) => JobModel.fromDoc(d)).toList();
+                  final jobs = snapshot.data!.docs.map((d) => JobModel.fromDoc(d)).where((j) {
+                    if (j.status != 'COMPLETED') return true;
+                    if (j.completedAt == null) return false; // Safety fallback
+                    return DateTime.now().difference(j.completedAt!).inHours < 24;
+                  }).toList();
                   jobs.sort((a, b) {
                     final aTime = a.createdAt ?? DateTime.now();
                     final bTime = b.createdAt ?? DateTime.now();

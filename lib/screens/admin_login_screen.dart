@@ -83,6 +83,45 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     }
   }
 
+  Future<void> _manualSeedAdmin() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = AuthService();
+      final result = await authService.signUp(
+        email: 'admin@smartlabour.com',
+        password: 'Admin123!',
+        firstName: 'System',
+        lastName: 'Admin',
+        phoneNumber: '0000000000',
+        profession: 'Administrator'
+      );
+
+      if (result['success']) {
+        final user = authService.firebaseUser;
+        if (user != null) {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).update({'role': 'Admin'});
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Admin account created! You can now log in.'), backgroundColor: Colors.green),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Seeding failed: ${result['message']}'), backgroundColor: Colors.orange),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,6 +205,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Text('Access Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: _isLoading ? null : _manualSeedAdmin,
+                  child: const Text(
+                    'Manual Admin Seeding (System Use Only)',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ),
               ],

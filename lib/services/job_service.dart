@@ -9,9 +9,17 @@ class JobService {
   Stream<List<JobModel>> streamJobs() {
     return _firestore
         .collection('jobs')
-        .orderBy('createdAt', descending: true)
+        .where('status', isEqualTo: 'OPEN')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => JobModel.fromDoc(d)).toList());
+        .map((snap) {
+          final list = snap.docs.map((d) => JobModel.fromDoc(d)).toList();
+          list.sort((a, b) {
+            final aTime = a.createdAt ?? DateTime.now();
+            final bTime = b.createdAt ?? DateTime.now();
+            return bTime.compareTo(aTime);
+          });
+          return list;
+        });
   }
 
   Future<JobModel?> getJob(String id) async {
@@ -60,7 +68,7 @@ class JobService {
     });
   }
 
-  Future<void> completeJob(String jobId, String workerId, double pay) async {
+  Future<void> completeJob(String jobId, String workerId, String clientId, double pay, int rating, String reviewText) async {
     final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
     if (!jobDoc.exists) return;
     
@@ -93,10 +101,35 @@ class JobService {
       workerUpdates['walletBalance'] = FieldValue.increment(pay);
     }
 
+    // Obtain worker to calculate new average rating
     final workerRef = _firestore.collection('users').doc(workerId);
+    final workerDoc = await workerRef.get();
+    
+    if (workerDoc.exists) {
+      final wData = workerDoc.data()!;
+      int currentTotalReviews = wData['totalReviews'] ?? 0;
+      double currentRating = (wData['rating'] ?? 4.8).toDouble();
+      
+      int newTotalReviews = currentTotalReviews + 1;
+      double newRating = ((currentRating * currentTotalReviews) + rating) / newTotalReviews;
+      
+      workerUpdates['rating'] = newRating;
+      workerUpdates['totalReviews'] = newTotalReviews;
+    }
+
     await workerRef.update(workerUpdates);
 
-    // 4. Notify Worker of payment release
+    // Save the review record
+    await _firestore.collection('reviews').add({
+      'jobId': jobId,
+      'workerId': workerId,
+      'clientId': clientId,
+      'rating': rating,
+      'reviewText': reviewText,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // 4. Notify Worker of payment release and review
     await createNotification(NotificationModel(
       id: '',
       receiverId: workerId,

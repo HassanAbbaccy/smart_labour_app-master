@@ -8,6 +8,7 @@ class UserModel {
   final String profession;
   final String? role;
   final double rating;
+  final int totalReviews;
   final int completedJobs;
   final double monthlyEarnings;
   final int activeJobs;
@@ -35,6 +36,7 @@ class UserModel {
     required this.profession,
     this.role,
     this.rating = 4.8,
+    this.totalReviews = 0,
     this.completedJobs = 0,
     this.monthlyEarnings = 0,
     this.activeJobs = 0,
@@ -66,6 +68,7 @@ class UserModel {
       profession: map['profession'] ?? '',
       role: map['role'],
       rating: (map['rating'] ?? 4.8).toDouble(),
+      totalReviews: map['totalReviews'] ?? 0,
       completedJobs: map['completedJobs'] ?? 0,
       monthlyEarnings: (map['monthlyEarnings'] ?? 0).toDouble(),
       activeJobs: map['activeJobs'] ?? 0,
@@ -97,6 +100,7 @@ class UserModel {
       'profession': profession,
       'role': role,
       'rating': rating,
+      'totalReviews': totalReviews,
       'completedJobs': completedJobs,
       'monthlyEarnings': monthlyEarnings,
       'activeJobs': activeJobs,

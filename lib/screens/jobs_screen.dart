@@ -171,6 +171,102 @@ class _JobCard extends StatelessWidget {
     );
   }
 
+  Future<void> _showRatingDialog(BuildContext context, JobModel j, double payAmount) async {
+    int rating = 0;
+    final reviewController = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('Rate Worker', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Please rate the worker\'s performance. This is required to complete the job.'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return IconButton(
+                        icon: Icon(
+                          index < rating ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 36,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            rating = index + 1;
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: reviewController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Write a quick review... (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: (rating == 0 || isSubmitting) ? null : () async {
+                    setDialogState(() => isSubmitting = true);
+                    final currentUser = AuthService().currentUser!;
+                    try {
+                      await JobService().completeJob(
+                        j.id, 
+                        j.workerId ?? '', 
+                        currentUser.uid,
+                        payAmount,
+                        rating,
+                        reviewController.text.trim(),
+                      );
+                      if (context.mounted) {
+                        Navigator.pop(context); // Close dialog
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Job Completed & Reviewed!'), backgroundColor: Colors.green),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                        );
+                        setDialogState(() => isSubmitting = false);
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF009688),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isSubmitting 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Submit & Complete'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = job.status?.toUpperCase() ?? '';
@@ -298,11 +394,7 @@ class _JobCard extends StatelessWidget {
                     final beforeDot = noPrefix.contains('.') ? noPrefix.split('.')[0] : noPrefix;
                     final cleanAmount = beforeDot.replaceAll(RegExp(r'[^0-9]'), '');
                     final payAmount = double.tryParse(cleanAmount) ?? 0.0;
-                    JobService().completeJob(
-                      job.id,
-                      job.workerId ?? '',
-                      payAmount,
-                    );
+                    _showRatingDialog(context, job, payAmount);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
