@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:untitled4/models/user_model.dart';
-import 'package:untitled4/screens/worker_profile_screen.dart';
+import 'package:smart_labour/models/user_model.dart';
+import 'package:smart_labour/screens/worker_profile_screen.dart';
+import '../widgets/custom_image_view.dart';
 
 class CategoryResultsScreen extends StatelessWidget {
   final String category;
@@ -146,19 +147,11 @@ class CategoryResultsScreen extends StatelessWidget {
           children: [
             Hero(
               tag: 'worker_image_${worker.uid}',
-              child: Container(
+              child: CustomImageView(
+                url: worker.avatarUrl,
                 width: 60,
                 height: 60,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.grey[200],
-                  image: DecorationImage(
-                    image: AssetImage(
-                      'assets/images/user_placeholder.png',
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                borderRadius: 12,
               ),
             ),
             const SizedBox(width: 16),

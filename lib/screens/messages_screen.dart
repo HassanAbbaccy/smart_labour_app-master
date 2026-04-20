@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:untitled4/services/message_service.dart';
-import 'package:untitled4/services/auth_service.dart';
+import 'package:smart_labour/services/message_service.dart';
+import 'package:smart_labour/services/auth_service.dart';
 import 'package:intl/intl.dart';
 import 'chat_screen.dart';
 

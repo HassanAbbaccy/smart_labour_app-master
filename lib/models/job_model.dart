@@ -19,6 +19,8 @@ class JobModel {
 
   final String? paymentStatus; // 'PENDING', 'PAID'
   final String? paymentMethod; // 'EasyPaisa', 'JazzCash', 'Bank'
+  final DateTime? startedAt;
+  final DateTime? completedAt;
 
   JobModel({
     required this.id,
@@ -38,13 +40,24 @@ class JobModel {
     this.clientId,
     this.paymentStatus = 'PENDING',
     this.paymentMethod,
+    this.startedAt,
+    this.completedAt,
   });
 
   factory JobModel.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     final ts = data['createdAt'];
+    final tsStarted = data['startedAt'];
+    final tsCompleted = data['completedAt'];
+
     DateTime? created;
+    DateTime? started;
+    DateTime? completed;
+
     if (ts is Timestamp) created = ts.toDate();
+    if (tsStarted is Timestamp) started = tsStarted.toDate();
+    if (tsCompleted is Timestamp) completed = tsCompleted.toDate();
+
     return JobModel(
       id: doc.id,
       title: data['title'] ?? '',
@@ -63,6 +76,8 @@ class JobModel {
       clientId: data['clientId'],
       paymentStatus: data['paymentStatus'] ?? 'PENDING',
       paymentMethod: data['paymentMethod'],
+      startedAt: started,
+      completedAt: completed,
     );
   }
 
@@ -83,6 +98,8 @@ class JobModel {
     'clientId': clientId,
     'paymentStatus': paymentStatus,
     'paymentMethod': paymentMethod,
+    'startedAt': startedAt != null ? Timestamp.fromDate(startedAt!) : null,
+    'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
   };
 }
 

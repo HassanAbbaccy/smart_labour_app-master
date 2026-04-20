@@ -4,7 +4,6 @@ import '../models/job_model.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/job_service.dart';
-import 'package:animate_do/animate_do.dart';
 import '../widgets/shimmer_loading.dart';
 import '../widgets/empty_state_widget.dart';
 
@@ -140,10 +139,7 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final job = jobs[index];
-              return FadeInUp(
-                duration: const Duration(milliseconds: 300),
-                delay: Duration(milliseconds: index * 50),
-                child: Container(
+              return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -238,8 +234,7 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                     ),
                   ],
                 ),
-              ),
-            );
+              );
           },
           );
         },

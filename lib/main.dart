@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:untitled4/screens/splash_screen.dart';
+import 'package:smart_labour/screens/splash_screen.dart';
 import 'firebase_options.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:untitled4/services/auth_service.dart';
+import 'package:smart_labour/services/auth_service.dart';
 import './theme/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:untitled4/services/session_service.dart';
-import 'package:untitled4/screens/signin_screen.dart';
+import 'package:smart_labour/services/session_service.dart';
+import 'package:smart_labour/screens/signin_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

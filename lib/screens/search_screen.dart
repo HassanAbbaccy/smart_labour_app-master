@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:untitled4/models/user_model.dart';
-import 'package:untitled4/screens/worker_profile_screen.dart';
+import 'package:smart_labour/models/user_model.dart';
+import 'package:smart_labour/screens/worker_profile_screen.dart';
+import '../widgets/custom_image_view.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -301,12 +302,12 @@ class _SearchScreenState extends State<SearchScreen> {
                     style: TextStyle(color: Color(0xFF4DB6AC), fontSize: 12),
                   ),
                 ),
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage: AssetImage(
-                    'assets/images/user_placeholder.png',
+                  CustomImageView(
+                    url: worker.avatarUrl,
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 12),

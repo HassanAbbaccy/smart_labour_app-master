@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:untitled4/services/auth_service.dart';
+import 'package:smart_labour/services/auth_service.dart';
 
 class ForgetPasswordScreen extends StatefulWidget {
   const ForgetPasswordScreen({super.key});

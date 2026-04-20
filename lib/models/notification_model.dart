@@ -29,7 +29,9 @@ class NotificationModel {
       title: data['title'] ?? '',
       body: data['body'] ?? '',
       type: data['type'] ?? 'general',
-      timestamp: (data['timestamp'] as Timestamp).toDate(),
+      timestamp: data['timestamp'] != null 
+          ? (data['timestamp'] as Timestamp).toDate() 
+          : DateTime.now(),
       isRead: data['isRead'] ?? false,
       data: data['data'],
     );

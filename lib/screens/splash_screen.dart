@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:untitled4/services/auth_service.dart';
-import 'package:untitled4/screens/onboarding_screen.dart'; // Import Onboarding
-import 'package:untitled4/screens/home_screen.dart';
-import 'package:untitled4/screens/role_selection_screen.dart';
-import 'package:untitled4/services/session_service.dart';
+import 'package:smart_labour/services/auth_service.dart';
+import 'package:smart_labour/screens/onboarding_screen.dart'; // Import Onboarding
+import 'package:smart_labour/screens/home_screen.dart';
+import 'package:smart_labour/screens/role_selection_screen.dart';
+import 'package:smart_labour/services/session_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

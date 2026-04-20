@@ -31,7 +31,27 @@ class JobService {
   Future<void> acceptJob(String jobId) async {
     await _firestore.collection('jobs').doc(jobId).update({
       'status': 'IN PROGRESS',
+      'startedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> acceptHiredJob(String jobId, String clientId, String workerName, String jobTitle) async {
+    // 1. Update Job Status
+    await _firestore.collection('jobs').doc(jobId).update({
+      'status': 'IN PROGRESS',
+      'startedAt': FieldValue.serverTimestamp(),
+    });
+
+    // 2. Notify Client that work has started
+    await createNotification(NotificationModel(
+      id: '',
+      receiverId: clientId,
+      title: 'Job Started',
+      body: '$workerName has accepted and started the job: $jobTitle',
+      type: 'status_update',
+      timestamp: DateTime.now(),
+      data: {'jobId': jobId},
+    ));
   }
 
   Future<void> declineJob(String jobId) async {
@@ -42,18 +62,22 @@ class JobService {
 
   Future<void> completeJob(String jobId, String workerId, double pay) async {
     final jobDoc = await _firestore.collection('jobs').doc(jobId).get();
+    if (!jobDoc.exists) return;
+    
+    final jobData = jobDoc.data() as Map<String, dynamic>;
+    final jobTitle = jobData['title'] ?? 'Job';
 
     // Update job status
-    Map<String, dynamic> jobUpdates = {'status': 'COMPLETED'};
+    Map<String, dynamic> jobUpdates = {
+      'status': 'COMPLETED',
+      'completedAt': FieldValue.serverTimestamp(),
+    };
 
     // Release Escrow if payment was held
     bool releaseEscrow = false;
-    if (jobDoc.exists) {
-      final jobData = jobDoc.data() as Map<String, dynamic>;
-      if (jobData['paymentStatus'] == 'IN_ESCROW') {
-        releaseEscrow = true;
-        jobUpdates['paymentStatus'] = 'RELEASED';
-      }
+    if (jobData['paymentStatus'] == 'IN_ESCROW') {
+      releaseEscrow = true;
+      jobUpdates['paymentStatus'] = 'RELEASED';
     }
 
     await _firestore.collection('jobs').doc(jobId).update(jobUpdates);
@@ -71,6 +95,17 @@ class JobService {
 
     final workerRef = _firestore.collection('users').doc(workerId);
     await workerRef.update(workerUpdates);
+
+    // 4. Notify Worker of payment release
+    await createNotification(NotificationModel(
+      id: '',
+      receiverId: workerId,
+      title: 'Payment Released',
+      body: 'Your payment of Rs. ${pay.toInt()} for "$jobTitle" has been released to your wallet!',
+      type: 'status_update',
+      timestamp: DateTime.now(),
+      data: {'jobId': jobId},
+    ));
   }
 
   Future<void> applyForJob(ApplicationModel app, String clientId, String jobTitle) async {
@@ -102,8 +137,33 @@ class JobService {
     return _firestore
         .collection('applications')
         .where('jobId', isEqualTo: jobId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => ApplicationModel.fromDoc(d)).toList());
+        .map((snap) {
+          final list = snap.docs.map((d) => ApplicationModel.fromDoc(d)).toList();
+          list.sort((a, b) {
+            final aTime = a.createdAt ?? DateTime.now();
+            final bTime = b.createdAt ?? DateTime.now();
+            return bTime.compareTo(aTime);
+          });
+          return list;
+        });
+  }
+
+  Future<void> markNotificationAsRead(String notificationId) async {
+    await _firestore.collection('notifications').doc(notificationId).update({
+      'isRead': true,
+    });
+  }
+
+  Future<void> notifyWorkerHired(String jobId, String workerId, String clientName, String jobTitle) async {
+    await createNotification(NotificationModel(
+      id: '',
+      receiverId: workerId,
+      title: 'You have been Hired!',
+      body: 'Congratulations! $clientName has hired you for the job: $jobTitle',
+      type: 'hiring',
+      timestamp: DateTime.now(),
+      data: {'jobId': jobId},
+    ));
   }
 }

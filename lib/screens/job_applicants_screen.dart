@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/job_model.dart';
 import '../services/job_service.dart';
 import 'payment_screen.dart';
+import '../widgets/custom_image_view.dart';
 
 class JobApplicantsScreen extends StatelessWidget {
   final JobModel job;
@@ -58,17 +59,11 @@ class JobApplicantsScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Container(
+                        CustomImageView(
+                          url: app.workerAvatarUrl,
                           width: 50,
                           height: 50,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE0F2F1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            color: Color(0xFF009688),
-                          ), // Fallback since actual avatars might not resolve
+                          borderRadius: 25,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -157,6 +152,7 @@ class JobApplicantsScreen extends StatelessWidget {
                                       amount: job.pay,
                                       workerName: app.workerName,
                                       workerId: app.workerId,
+                                      jobTitle: job.title,
                                     ),
                                   ),
                                 );

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/job_model.dart';
 import '../services/job_service.dart';
 import '../services/auth_service.dart';
-import 'package:animate_do/animate_do.dart';
+import 'job_applicants_screen.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final JobModel? job;
@@ -66,6 +66,42 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     }
   }
 
+  Future<void> _handleAccept() async {
+    final j = widget.job;
+    if (j == null) return;
+    
+    final user = AuthService().currentUser;
+    if (user == null) return;
+
+    setState(() => _isApplying = true); // Repurpose isApplying for loading state
+    try {
+      await JobService().acceptHiredJob(
+        j.id, 
+        j.clientId ?? '', 
+        user.fullName, 
+        j.title
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Job Accepted! You can now start working.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context); // Refresh or go back
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isApplying = false);
+    }
+  }
+
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -125,10 +161,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       ),
       body: j == null
           ? const Center(child: Text('Job not found'))
-          : FadeInUp(
-              duration: const Duration(milliseconds: 400),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -159,6 +193,24 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
+                          if (j.status?.toUpperCase() == 'COMPLETED' && j.startedAt != null && j.completedAt != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.timer_outlined, size: 16, color: Color(0xFF009688)),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Time Taken: ${_formatDuration(j.completedAt!.difference(j.startedAt!))}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF009688),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           Row(
                             children: [
                               const Icon(Icons.location_on, size: 18, color: Color(0xFF009688)),
@@ -202,36 +254,147 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     ),
                     const SizedBox(height: 48),
                     
-                    // Apply Button
+                    // Owner vs Worker Button
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _isApplying ? null : _handleApply,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1A1C18),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        icon: _isApplying 
-                          ? const SizedBox(
-                              width: 20, 
-                              height: 20, 
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
-                            ) 
-                          : const Icon(Icons.send),
-                        label: Text(
-                          _isApplying ? 'Applying...' : 'Apply for Job',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                      child: _buildActionButton(j),
                     ),
                   ],
                 ),
               ),
-            ),
     );
+  }
+
+  Widget _buildActionButton(JobModel j) {
+    final currentUser = AuthService().currentUser;
+    final isClient = j.clientId == currentUser?.uid;
+    final isWorker = j.workerId == currentUser?.uid;
+    
+    if (isClient) {
+      if (j.status == 'IN PROGRESS') {
+        return ElevatedButton.icon(
+          onPressed: () {
+            // Robust Whole-Number Parsing
+            final rawVal = j.pay;
+            final noPrefix = rawVal.toLowerCase().replaceAll('rs.', '').replaceAll('rs', '').trim();
+            final beforeDot = noPrefix.contains('.') ? noPrefix.split('.')[0] : noPrefix;
+            final cleanAmount = beforeDot.replaceAll(RegExp(r'[^0-9]'), '');
+            final payAmount = double.tryParse(cleanAmount) ?? 0.0;
+            
+            JobService().completeJob(j.id, j.workerId ?? '', payAmount);
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Job Completed Successfully!'), backgroundColor: Colors.green),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          icon: const Icon(Icons.check_circle),
+          label: const Text(
+            'Mark Completed',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        );
+      }
+      
+      return ElevatedButton.icon(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => JobApplicantsScreen(job: j),
+            ),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF009688),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        icon: const Icon(Icons.people_outline),
+        label: Text(
+          'View Applicants (${j.workersOffered ?? 0})',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    // If I am the hired worker
+    if (isWorker) {
+      if (j.status == 'HIRED') {
+        return ElevatedButton.icon(
+          onPressed: _isApplying ? null : _handleAccept,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF009688),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          icon: _isApplying
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : const Icon(Icons.check_circle_outline),
+          label: Text(
+            _isApplying ? 'Starting...' : 'Accept & Start Job',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        );
+      }
+      
+      if (j.status == 'IN PROGRESS') {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0F2F1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF009688)),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.timer_outlined, color: Color(0xFF009688)),
+              SizedBox(width: 8),
+              Text(
+                'Job is In Progress',
+                style: TextStyle(color: Color(0xFF009688), fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    // Default: Apply for Job
+    return ElevatedButton.icon(
+      onPressed: (j.status == 'HIRED' || j.status == 'IN PROGRESS')
+          ? null
+          : (_isApplying ? null : _handleApply),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF1A1C18),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      icon: _isApplying
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+          : const Icon(Icons.send),
+      label: Text(
+        j.status == 'HIRED' || j.status == 'IN PROGRESS' 
+            ? 'Job Closed' 
+            : (_isApplying ? 'Applying...' : 'Apply for Job'),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration d) {
+    if (d.inHours > 0) {
+      return '${d.inHours}h ${d.inMinutes.remainder(60)}m';
+    }
+    return '${d.inMinutes}m';
   }
 }

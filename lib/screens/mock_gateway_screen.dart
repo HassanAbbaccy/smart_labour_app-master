@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../services/job_service.dart';
+import '../services/auth_service.dart';
 
 class MockGatewayScreen extends StatefulWidget {
   final String paymentMethod;
@@ -8,6 +10,7 @@ class MockGatewayScreen extends StatefulWidget {
   final String workerName;
   final String workerId;
   final String mobileNumber;
+  final String jobTitle;
 
   const MockGatewayScreen({
     super.key,
@@ -17,6 +20,7 @@ class MockGatewayScreen extends StatefulWidget {
     required this.workerName,
     required this.workerId,
     required this.mobileNumber,
+    required this.jobTitle,
   });
 
   @override
@@ -49,25 +53,37 @@ class _MockGatewayScreenState extends State<MockGatewayScreen> {
       // Simulate network delay and processing time
       await Future.delayed(const Duration(seconds: 3));
 
-      // 1. Update Job Status to IN_ESCROW and assign worker
+      // 1. Update Job Status to HIRED (Worker must accept to start)
+      final currentUserName = AuthService().currentUser?.fullName ?? 'A Client';
       await FirebaseFirestore.instance
           .collection('jobs')
           .doc(widget.jobId)
           .update({
             'paymentStatus': 'IN_ESCROW',
             'paymentMethod': widget.paymentMethod,
-            'status': 'IN_PROGRESS',
+            'status': 'HIRED',
             'workerId': widget.workerId,
             'workerName': widget.workerName,
           });
 
-      // 2. Fetch workerId and Update Escrow Balance securely
-      final cleanAmount = widget.amount.replaceAll(RegExp(r'[^0-9.]'), '');
+      // 2. Fetch workerId and Update Escrow Balance securely (Robust Whole-Number Parsing)
+      final rawVal = widget.amount;
+      final noPrefix = rawVal.toLowerCase().replaceAll('rs.', '').replaceAll('rs', '').trim();
+      final beforeDot = noPrefix.contains('.') ? noPrefix.split('.')[0] : noPrefix;
+      final cleanAmount = beforeDot.replaceAll(RegExp(r'[^0-9]'), '');
       final amt = double.tryParse(cleanAmount) ?? 0.0;
       await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.workerId)
           .update({'escrowBalance': FieldValue.increment(amt)});
+
+      // 3. Notify Worker
+      await JobService().notifyWorkerHired(
+        widget.jobId, 
+        widget.workerId, 
+        currentUserName, 
+        widget.jobTitle,
+      );
 
       if (mounted) {
         _showSuccessDialog();

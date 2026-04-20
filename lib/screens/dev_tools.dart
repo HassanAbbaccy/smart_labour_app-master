@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:untitled4/models/job_model.dart';
-import 'package:untitled4/models/message_model.dart';
-import 'package:untitled4/services/job_service.dart';
-import 'package:untitled4/services/message_service.dart';
-import 'package:untitled4/services/auth_service.dart';
+import 'package:smart_labour/models/job_model.dart';
+import 'package:smart_labour/models/message_model.dart';
+import 'package:smart_labour/services/job_service.dart';
+import 'package:smart_labour/services/message_service.dart';
+import 'package:smart_labour/services/auth_service.dart';
 
 class DevToolsScreen extends StatelessWidget {
   const DevToolsScreen({super.key});

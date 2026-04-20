@@ -1,11 +1,11 @@
-import 'package:untitled4/services/message_service.dart';
-import 'package:untitled4/screens/chat_screen.dart';
-import 'package:untitled4/screens/payment_screen.dart';
+import 'package:smart_labour/services/message_service.dart';
+import 'package:smart_labour/screens/chat_screen.dart';
+import 'package:smart_labour/screens/payment_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:untitled4/services/auth_service.dart';
+import 'package:smart_labour/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:untitled4/models/user_model.dart';
+import 'package:smart_labour/models/user_model.dart';
 import 'package:animate_do/animate_do.dart';
 import '../widgets/custom_image_view.dart';
 
@@ -186,6 +186,7 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
             amount: 'Rs. ${widget.worker.hourlyRate.toInt()}',
             workerName: widget.worker.fullName,
             workerId: widget.worker.uid,
+            jobTitle: 'Professional Services',
           ),
         ),
       );

@@ -246,6 +246,25 @@ class _JobCard extends StatelessWidget {
             style: const TextStyle(color: Colors.grey, fontSize: 14),
           ),
           const SizedBox(height: 12),
+          if (job.status?.toUpperCase() == 'COMPLETED' &&
+              job.startedAt != null &&
+              job.completedAt != null) ...[
+            Row(
+              children: [
+                const Icon(Icons.timer_outlined, size: 14, color: Colors.blueGrey),
+                const SizedBox(width: 4),
+                Text(
+                  'Time Taken: ${_formatDuration(job.completedAt!.difference(job.startedAt!))}',
+                  style: const TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -273,12 +292,12 @@ class _JobCard extends StatelessWidget {
               if (!isWorker && isInProgress)
                 ElevatedButton(
                   onPressed: () {
-                    // Extract pay amount from job.pay string (e.g., "5000" from "Rs. 5000")
-                    final payAmount =
-                        double.tryParse(
-                          job.pay.replaceAll(RegExp(r'[^0-9.]'), ''),
-                        ) ??
-                        0.0;
+                    // Robust Whole-Number Parsing
+                    final rawVal = job.pay;
+                    final noPrefix = rawVal.toLowerCase().replaceAll('rs.', '').replaceAll('rs', '').trim();
+                    final beforeDot = noPrefix.contains('.') ? noPrefix.split('.')[0] : noPrefix;
+                    final cleanAmount = beforeDot.replaceAll(RegExp(r'[^0-9]'), '');
+                    final payAmount = double.tryParse(cleanAmount) ?? 0.0;
                     JobService().completeJob(
                       job.id,
                       job.workerId ?? '',
@@ -305,5 +324,12 @@ class _JobCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatDuration(Duration d) {
+    if (d.inHours > 0) {
+      return '${d.inHours}h ${d.inMinutes.remainder(60)}m';
+    }
+    return '${d.inMinutes}m';
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'mock_gateway_screen.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import '../services/job_service.dart';
+import '../services/auth_service.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String jobId;
@@ -10,12 +12,15 @@ class PaymentScreen extends StatefulWidget {
   final String workerName;
   final String workerId;
 
+  final String jobTitle;
+
   const PaymentScreen({
     super.key,
     required this.jobId,
     required this.amount,
     required this.workerName,
     required this.workerId,
+    required this.jobTitle,
   });
 
   @override
@@ -47,22 +52,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
             workerName: widget.workerName,
             workerId: widget.workerId,
             mobileNumber: _mobileController.text,
+            jobTitle: widget.jobTitle,
           ),
         ),
       );
     } else if (selectedMethod == 'Stripe (Card)') {
       setState(() => isProcessing = true);
       try {
-        // 1. Aggressive Whole-Number Parsing with Prefix Handling
+        // 1. Robust Whole-Number Parsing
         String rawVal = widget.amount;
         
-        // Strip "Rs." or "Rs" prefix (case-insensitive)
-        String noPrefix = rawVal.toLowerCase().replaceAll('rs.', '').replaceAll('rs', '');
+        // Remove "Rs." or "Rs" prefix first (to avoid the dot in "Rs." being seen as a decimal)
+        String noPrefix = rawVal.toLowerCase().replaceAll('rs.', '').replaceAll('rs', '').trim();
         
-        // Take everything before a remaining dot (ignore any true decimals)
+        // Discard any actual decimal parts (take only before the first remaining dot)
         String beforeDot = noPrefix.contains('.') ? noPrefix.split('.')[0] : noPrefix;
         
-        // Remove everything that isn't a digit
+        // Extract digits only
         String cleanAmount = beforeDot.replaceAll(RegExp(r'[^0-9]'), '');
         double pkrAmount = double.tryParse(cleanAmount) ?? 0.0;
         
@@ -70,33 +76,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
         const double pkrToUsdRate = 0.0036;
         double usdAmount = pkrAmount * pkrToUsdRate;
         
-        // 3. Convert to Cents for Stripe
+        // 3. Convert to Cents for Stripe (Round to nearest integer)
         int amountInCents = (usdAmount * 100).round();
 
-        // 4. ON-SCREEN DEBUGGING (Comprehensive)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('DEBUG | Raw: "$rawVal" | Clean: $cleanAmount | PKR: $pkrAmount | USD: \$${usdAmount.toStringAsFixed(2)}'),
-            duration: const Duration(seconds: 5),
-            backgroundColor: const Color(0xFF003366), // Deep blue for visibility
-          ),
-        );
-
-        debugPrint('--- FINAL PARSING DEBUG ---');
-        debugPrint('Raw Input: "$rawVal"');
-        debugPrint('Before Dot: "$beforeDot"');
-        debugPrint('Cleaned Digits: "$cleanAmount"');
-        debugPrint('Final PKR: $pkrAmount');
-        debugPrint('Cents to Stripe: $amountInCents');
-
-        // 5. Validate Minimum $0.50 USD
+        // 4. Validate Minimum $0.50 USD (Requirement for Stripe)
         if (amountInCents < 50) {
           setState(() => isProcessing = false);
-          // Don't return yet, let the user see the blue bar first if we want, 
-          // but actually we must stop Stripe.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Minimum amount for Card payment is Rs. 150 (approx. \$0.50 USD)'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
           return;
         }
 
+        debugPrint('Connecting to Stripe Backend...');
         final HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('createPaymentIntent');
         final response = await callable.call({
           'amount': amountInCents,
@@ -105,7 +102,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         });
 
         final clientSecret = response.data['clientSecret'];
+        if (clientSecret == null) throw Exception('Failed to get client secret from server.');
 
+        debugPrint('Initializing Payment Sheet...');
         await Stripe.instance.initPaymentSheet(
           paymentSheetParameters: SetupPaymentSheetParameters(
             paymentIntentClientSecret: clientSecret,
@@ -113,28 +112,48 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
         );
 
+        debugPrint('Presenting Payment Sheet...');
         await Stripe.instance.presentPaymentSheet();
 
+        debugPrint('Updating Firestore (Escrow)...');
+        final currentUserName = AuthService().currentUser?.fullName ?? 'A Client';
+        
         await FirebaseFirestore.instance.collection('jobs').doc(widget.jobId).update({
           'paymentStatus': 'IN_ESCROW',
           'paymentMethod': selectedMethod,
-          'status': 'IN_PROGRESS', 
+          'status': 'HIRED', 
           'workerId': widget.workerId,
           'workerName': widget.workerName,
         });
 
         await FirebaseFirestore.instance.collection('users').doc(widget.workerId).update({'escrowBalance': FieldValue.increment(pkrAmount)});
 
+        // Notify Worker
+        await JobService().notifyWorkerHired(
+          widget.jobId, 
+          widget.workerId,
+          currentUserName,
+          widget.jobTitle,
+        );
+
         if (mounted) {
           _showSuccessDialog();
         }
       } catch (e) {
         if (mounted) {
+          String errorMessage = 'Payment Error: $e';
           if (e is StripeException) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment cancelled or failed.'), backgroundColor: Colors.red));
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payment Error: $e'), backgroundColor: Colors.red));
+            errorMessage = e.error.localizedMessage ?? 'Stripe payment was cancelled or failed.';
+          } else if (e is FirebaseFunctionsException) {
+            errorMessage = 'Server Error: ${e.message}';
           }
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       } finally {
         if (mounted) setState(() => isProcessing = false);
@@ -143,15 +162,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
       // For Bank Transfer or other methods
       setState(() => isProcessing = true);
       try {
-        await Future.delayed(const Duration(seconds: 2));
-
+        final currentUserName = AuthService().currentUser?.fullName ?? 'A Client';
         await FirebaseFirestore.instance
             .collection('jobs')
             .doc(widget.jobId)
             .update({
               'paymentStatus': 'IN_ESCROW',
               'paymentMethod': selectedMethod,
-              'status': 'IN_PROGRESS', // job starts!
+              'status': 'HIRED', 
               'workerId': widget.workerId,
               'workerName': widget.workerName,
             });
@@ -162,6 +180,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
             .collection('users')
             .doc(widget.workerId)
             .update({'escrowBalance': FieldValue.increment(amt)});
+
+        // Notify Worker
+        await JobService().notifyWorkerHired(
+          widget.jobId, 
+          widget.workerId,
+          currentUserName,
+          widget.jobTitle,
+        );
 
         if (mounted) {
           _showSuccessDialog();

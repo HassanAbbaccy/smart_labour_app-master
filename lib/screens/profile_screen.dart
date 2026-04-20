@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:untitled4/services/auth_service.dart';
-import 'package:untitled4/screens/signin_screen.dart';
+import 'package:smart_labour/services/auth_service.dart';
+import 'package:smart_labour/screens/signin_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:untitled4/screens/dev_tools.dart';
-import 'package:untitled4/screens/help_support_screen.dart';
-import 'package:untitled4/screens/terms_privacy_screen.dart';
-import 'package:untitled4/screens/address_management_screen.dart';
+import 'package:smart_labour/screens/dev_tools.dart';
+import 'package:smart_labour/screens/help_support_screen.dart';
+import 'package:smart_labour/screens/terms_privacy_screen.dart';
+import 'package:smart_labour/screens/address_management_screen.dart';
+import 'package:smart_labour/screens/withdrawal_screen.dart';
 import 'package:animate_do/animate_do.dart';
+import '../models/user_model.dart';
 import '../widgets/custom_image_view.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -344,7 +346,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       '${userData['firstName'] ?? "User"} ${userData['lastName'] ?? ""}';
                   final phoneNumber =
                       userData['phoneNumber'] ?? "+92 300 1234567";
-                  final walletBalance = userData['walletBalance'] ?? 0;
+                  final walletBalance = (userData['walletBalance'] ?? 0.0).toDouble();
 
                   return FadeInUp(
                     duration: const Duration(milliseconds: 500),
@@ -468,91 +470,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Wallet Card
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00BCD4),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(
-                                    0xFF00BCD4,
-                                  ).withValues(alpha: 0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                          // Wallet Balance
+                          _buildBalanceCard(
+                            title: 'My Wallet Balance',
+                            subtitle: 'Tap to withdraw funds',
+                            amount: walletBalance,
+                            color: const Color(0xFF009688),
+                            icon: Icons.account_balance_wallet,
+                            onTap: () {
+                              final currentUserStruct = UserModel.fromMap(userData, uid);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => WithdrawalScreen(user: currentUserStruct),
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'My Wallet Balance',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'PKR ${walletBalance.toString()}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: ElevatedButton(
-                                        onPressed: () {},
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.white
-                                              .withValues(alpha: 0.2),
-                                          foregroundColor: Colors.white,
-                                          elevation: 0,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                        ),
-                                        child: const Text('Top Up'),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: ElevatedButton(
-                                        onPressed: () {},
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.white
-                                              .withValues(alpha: 0.2),
-                                          foregroundColor: Colors.white,
-                                          elevation: 0,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                        ),
-                                        child: const Text('History'),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Escrow Balance
+                          _buildBalanceCard(
+                            title: 'Secure Escrow Balance',
+                            subtitle: 'Funds held during active jobs',
+                            amount: userData['escrowBalance']?.toDouble() ?? 0.0,
+                            color: const Color(0xFFEF6C00),
+                            icon: Icons.security,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Monthly Earnings
+                          _buildBalanceCard(
+                            title: 'Monthly Earnings',
+                            subtitle: 'Total earned this month',
+                            amount: userData['monthlyEarnings']?.toDouble() ?? 0.0,
+                            color: const Color(0xFF1976D2),
+                            icon: Icons.trending_up,
                           ),
                           const SizedBox(height: 32),
 
@@ -714,6 +667,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
             ),
+    );
+  }
+
+  Widget _buildBalanceCard({
+    required String title,
+    required String subtitle,
+    required double amount,
+    required Color color,
+    required IconData icon,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.05),
+            offset: const Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'PKR ${amount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1C18),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
     );
   }
 

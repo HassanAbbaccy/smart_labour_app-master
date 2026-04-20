@@ -18,6 +18,7 @@ import 'profile_screen.dart';
 import 'verification_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'create_job_screen.dart';
+import 'job_detail_screen.dart';
 import 'job_feed_screen.dart';
 import 'notifications_screen.dart';
 import '../services/job_service.dart';
@@ -320,7 +321,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
           ),
           const SizedBox(height: 32),
 
-          // Active Job / Incoming Requests
+          // Section 1: Hired Invitations (To Accept)
           const Text(
             'Job Invitations',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -331,12 +332,12 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             stream: FirebaseFirestore.instance
                 .collection('jobs')
                 .where('workerId', isEqualTo: user.uid)
-                .where('status', isEqualTo: 'REQUESTED')
+                .where('status', whereIn: const ['REQUESTED', 'HIRED'])
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                 return _buildEmptyState(
-                  'No job invitations yet. When a client hires you, the request will appear here in real-time!',
+                  'No new invitations. When a client hires you, it will appear here!',
                 );
               }
               return ListView.separated(
@@ -352,12 +353,48 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               );
             },
           ),
+          const SizedBox(height: 32),
+
+          // Section 2: Active Work (In Progress)
+          const Text(
+            'My Active Jobs',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('jobs')
+                .where('workerId', isEqualTo: user.uid)
+                .where('status', isEqualTo: 'IN PROGRESS')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return _buildEmptyState(
+                  'No active jobs. Accept an invitation to start working!',
+                );
+              }
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: snapshot.data!.docs.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final job = JobModel.fromDoc(snapshot.data!.docs[index]);
+                  return _buildActiveJobCard(job);
+                },
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
   Widget _buildRequestCard(JobModel job) {
+    final user = AuthService().currentUser;
+    if (user == null) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -377,7 +414,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.handyman_outlined,
+                  Icons.card_membership_outlined,
                   color: Color(0xFF009688),
                 ),
               ),
@@ -394,8 +431,14 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                       ),
                     ),
                     Text(
-                      job.location,
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                      job.status == 'REQUESTED' 
+                        ? 'Direct Hire Request' 
+                        : 'Hired by client!',
+                      style: TextStyle(
+                        color: job.status == 'REQUESTED' ? Colors.orange[800] : Colors.green[700], 
+                        fontSize: 12, 
+                        fontWeight: FontWeight.bold
+                      ),
                     ),
                   ],
                 ),
@@ -421,13 +464,85 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => JobService().acceptJob(job.id),
+                  onPressed: () => JobService().acceptHiredJob(
+                    job.id,
+                    job.clientId ?? '',
+                    user.fullName,
+                    job.title,
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF009688),
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Accept'),
+                  child: const Text('Accept & Start'),
                 ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveJobCard(JobModel job) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE3F2FD),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const Text(
+                      'Currently in progress',
+                      style: TextStyle(color: Colors.blue, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => JobDetailScreen(job: job),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: const Size(0, 32),
+                ),
+                child: const Text('View', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
@@ -615,44 +730,92 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on_outlined,
-                            color: Color(0xFF00BCD4),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _currentAddress,
-                            style: const TextStyle(
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF00BCD4),
-                            ),
-                          ),
-                          if (_isLoadingLocation)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 8),
-                              child: SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          else
+                      GestureDetector(
+                        onTap: _currentAddress.contains('Denied')
+                            ? () => Geolocator.openAppSettings()
+                            : null,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             Icon(
-                              Icons.keyboard_arrow_down,
-                              color: Colors.grey[400],
+                              _currentAddress.contains('Denied')
+                                  ? Icons.location_off
+                                  : Icons.location_on_outlined,
+                              color: const Color(0xFF00BCD4),
                               size: 20,
                             ),
-                        ],
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                _currentAddress,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF00BCD4),
+                                ),
+                              ),
+                            ),
+                            if (_isLoadingLocation)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 8),
+                                child: SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              )
+                            else if (_currentAddress.contains('Denied'))
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF00BCD4),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'FIX',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Colors.grey[400],
+                                size: 20,
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  _buildNotificationIcon(),
+                  Row(
+                    children: [
+                      _buildNotificationIcon(),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () {
+                          // Navigate to profile tab
+                          // This typically requires a callback to the parent scaffold
+                        },
+                        child: CustomImageView(
+                          url: user.avatarUrl,
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -664,16 +827,20 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
 
             // Recent Activity
             StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
+             stream: FirebaseFirestore.instance
                   .collection('jobs')
                   .where('clientId', isEqualTo: user.uid)
-                  .orderBy('createdAt', descending: true)
-                  .limit(1)
                   .snapshots(),
               builder: (context, snapshot) {
                 JobModel? job;
                 if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                  job = JobModel.fromDoc(snapshot.data!.docs.first);
+                  final jobs = snapshot.data!.docs.map((d) => JobModel.fromDoc(d)).toList();
+                  jobs.sort((a, b) {
+                    final aTime = a.createdAt ?? DateTime.now();
+                    final bTime = b.createdAt ?? DateTime.now();
+                    return bTime.compareTo(aTime);
+                  });
+                  job = jobs.isNotEmpty ? jobs.first : null;
                 }
 
                 return Column(
@@ -775,40 +942,61 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
   }
 
   Widget _buildNotificationIcon() {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+    final user = AuthService().currentUser;
+    if (user == null) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('receiverId', isEqualTo: user.uid)
+          .where('isRead', isEqualTo: false)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.hasData ? snapshot.data!.docs.length : 0;
+
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            );
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFF8E1),
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.notifications_outlined, color: Colors.black87),
+                if (unreadCount > 0)
+                  Positioned(
+                    top: 10,
+                    right: 12,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: const BoxDecoration(
-          color: Color(0xFFFFF8E1),
-          shape: BoxShape.circle,
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            const Icon(Icons.notifications_outlined, color: Colors.black87),
-            Positioned(
-              top: 10,
-              right: 12,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Colors.amber,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -955,11 +1143,11 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundImage: AssetImage(
-                      'assets/images/user_placeholder.png',
-                    ),
+                  CustomImageView(
+                    url: job.workerAvatarUrl,
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -1461,16 +1649,11 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
           children: [
             Hero(
               tag: 'worker_image_$workerUid',
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/user_placeholder.png'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+              child: CustomImageView(
+                url: imageUrl,
+                width: 50,
+                height: 50,
+                borderRadius: 25,
               ),
             ),
             const SizedBox(width: 12),
