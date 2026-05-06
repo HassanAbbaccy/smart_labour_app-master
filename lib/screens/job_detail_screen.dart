@@ -48,6 +48,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         workerAvatarUrl: user.avatarUrl ?? 'https://i.pravatar.cc/150?u=${user.uid}',
         workerRating: user.rating,
         status: 'pending',
+        hourlyRate: user.hourlyRate,
       );
 
       await JobService().applyForJob(application, j.clientId ?? '', j.title);

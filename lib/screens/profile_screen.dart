@@ -5,8 +5,7 @@ import 'package:smart_labour/screens/signin_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:smart_labour/screens/dev_tools.dart';
+
 import 'package:smart_labour/screens/help_support_screen.dart';
 import 'package:smart_labour/screens/terms_privacy_screen.dart';
 import 'package:smart_labour/screens/address_management_screen.dart';
@@ -173,14 +172,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   controller: phoneController,
                   decoration: const InputDecoration(labelText: 'Phone Number'),
                 ),
-                TextField(
-                  controller: rateController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Hourly Rate (PKR)',
-                    prefixText: 'Rs. ',
+                if (userData['role'] == 'Worker')
+                  TextField(
+                    controller: rateController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Hourly Rate (PKR)',
+                      prefixText: 'Rs. ',
+                    ),
                   ),
-                ),
                 if (userData['role'] == 'Worker') ...[
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
@@ -209,50 +209,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   controller: addressController,
                   decoration: const InputDecoration(labelText: 'Address'),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Skills',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: tempSkills
-                      .map(
-                        (skill) => Chip(
-                          label: Text(skill),
-                          onDeleted: () {
-                            setDialogState(() {
-                              tempSkills.remove(skill);
-                            });
-                          },
-                        ),
-                      )
-                      .toList(),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: skillController,
-                        decoration: const InputDecoration(
-                          hintText: 'Add skill',
+                if (userData['role'] == 'Worker') ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Skills',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: tempSkills
+                        .map(
+                          (skill) => Chip(
+                            label: Text(skill),
+                            onDeleted: () {
+                              setDialogState(() {
+                                tempSkills.remove(skill);
+                              });
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: skillController,
+                          decoration: const InputDecoration(
+                            hintText: 'Add skill',
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () {
-                        if (skillController.text.isNotEmpty) {
-                          setDialogState(() {
-                            tempSkills.add(skillController.text.trim());
-                            skillController.clear();
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          if (skillController.text.isNotEmpty) {
+                            setDialogState(() {
+                              tempSkills.add(skillController.text.trim());
+                              skillController.clear();
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ],
             );
           },
@@ -444,47 +446,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Wallet Balance
-                          _buildBalanceCard(
-                            title: tr('wallet_balance'),
-                            subtitle: 'Tap to withdraw funds',
-                            amount: walletBalance,
-                            color: const Color(0xFF009688),
-                            icon: Icons.account_balance_wallet,
-                            onTap: () {
-                              final currentUserStruct = UserModel.fromMap(userData, uid);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => WithdrawalScreen(user: currentUserStruct),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 16),
+                          // Financial Cards (Only for Workers)
+                          if (userData['role'] == 'Worker') ...[
+                            // Wallet Balance
+                            _buildBalanceCard(
+                              title: tr('wallet_balance'),
+                              subtitle: 'Tap to withdraw funds',
+                              amount: walletBalance,
+                              color: const Color(0xFF009688),
+                              icon: Icons.account_balance_wallet,
+                              onTap: () {
+                                final currentUserStruct =
+                                    UserModel.fromMap(userData, uid);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => WithdrawalScreen(
+                                      user: currentUserStruct,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
 
-                          // Escrow Balance
-                          _buildBalanceCard(
-                            title: 'Secure Escrow Balance',
-                            subtitle: 'Funds held during active jobs',
-                            amount: userData['escrowBalance']?.toDouble() ?? 0.0,
-                            color: const Color(0xFFEF6C00),
-                            icon: Icons.security,
-                          ),
-                          const SizedBox(height: 16),
+                            // Pending Amounts
+                            _buildBalanceCard(
+                              title: 'Pending Amounts',
+                              subtitle: 'Funds held during active jobs',
+                              amount:
+                                  userData['escrowBalance']?.toDouble() ?? 0.0,
+                              color: const Color(0xFFEF6C00),
+                              icon: Icons.security,
+                            ),
+                            const SizedBox(height: 16),
 
-                          // Monthly Earnings
-                          _buildBalanceCard(
-                            title: 'Monthly Earnings',
-                            subtitle: 'Total earned this month',
-                            amount: userData['monthlyEarnings']?.toDouble() ?? 0.0,
-                            color: const Color(0xFF1976D2),
-                            icon: Icons.trending_up,
-                          ),
-                          const SizedBox(height: 32),
+                            // Monthly Earnings
+                            _buildBalanceCard(
+                              title: 'Monthly Earnings',
+                              subtitle: 'Total earned this month',
+                              amount: userData['monthlyEarnings']?.toDouble() ??
+                                  0.0,
+                              color: const Color(0xFF1976D2),
+                              icon: Icons.trending_up,
+                            ),
+                            const SizedBox(height: 32),
+                          ],
 
-                          // Skills Section
-                          if (userData['skills'] != null &&
+                          // Skills Section (Only for Workers)
+                          if (userData['role'] == 'Worker' &&
+                              userData['skills'] != null &&
                               (userData['skills'] as List).isNotEmpty) ...[
                             const Text(
                               'Professional Skills',
@@ -594,21 +605,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               );
                             },
                           ),
-                          if (kDebugMode)
-                            _buildMenuItem(
-                              icon: Icons.developer_mode,
-                              title: 'Dev Tools',
-                              iconColor: Colors.orange.withValues(alpha: 0.1),
-                              iconTextColor: Colors.orange,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const DevToolsScreen(),
-                                  ),
-                                );
-                              },
-                            ),
+
 
                           const SizedBox(height: 24),
                           _buildMenuItem(

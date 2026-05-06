@@ -16,7 +16,6 @@ class UserModel {
   final double escrowBalance;
   final List<String> skills;
   final String experience;
-  final String whatsappNumber;
   final String? avatarUrl;
   final String? address;
   final double hourlyRate;
@@ -48,7 +47,6 @@ class UserModel {
     this.escrowBalance = 0.0,
     this.skills = const [],
     this.experience = '',
-    this.whatsappNumber = '',
     this.avatarUrl,
     this.address,
     this.hourlyRate = 1200,
@@ -83,7 +81,6 @@ class UserModel {
       escrowBalance: (map['escrowBalance'] ?? 0.0).toDouble(),
       skills: List<String>.from(map['skills'] ?? []),
       experience: map['experience'] ?? '',
-      whatsappNumber: map['whatsappNumber'] ?? '',
       avatarUrl: map['avatarUrl'],
       address: map['address'],
       hourlyRate: (map['hourlyRate'] ?? 1200).toDouble(),
@@ -118,7 +115,6 @@ class UserModel {
       'escrowBalance': escrowBalance,
       'skills': skills,
       'experience': experience,
-      'whatsappNumber': whatsappNumber,
       'avatarUrl': avatarUrl,
       'address': address,
       'hourlyRate': hourlyRate,

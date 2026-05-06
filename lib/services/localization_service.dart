@@ -72,7 +72,7 @@ class LocalizationService {
       'availability': 'Availability',
       'client_reviews': 'Client Reviews',
       'experience': 'Experience',
-      'whatsapp': 'WhatsApp',
+      'per_hour': 'per hour',
     },
     'ur': {
       'app_title': 'اسمارٹ لیبر',
@@ -126,7 +126,7 @@ class LocalizationService {
       'availability': 'دستیابی',
       'client_reviews': 'کلائنٹ کے تبصرے',
       'experience': 'تجربہ',
-      'whatsapp': 'واٹس ایپ',
+      'per_hour': 'فی گھنٹہ',
     },
   };
 

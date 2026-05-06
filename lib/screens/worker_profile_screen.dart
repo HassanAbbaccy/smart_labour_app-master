@@ -5,7 +5,7 @@ import 'package:smart_labour/screens/payment_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_labour/services/auth_service.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 import 'package:smart_labour/models/user_model.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:smart_labour/services/localization_service.dart';
@@ -21,26 +21,6 @@ class WorkerProfileScreen extends StatefulWidget {
 }
 
 class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
-  Future<void> _launchWhatsApp() async {
-    final phone = widget.worker.whatsappNumber;
-    if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('WhatsApp number not available')),
-      );
-      return;
-    }
-
-    final url = 'https://wa.me/$phone';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch WhatsApp')),
-      );
-    }
-  }
-
   void _showHireDialog() {
     final user = AuthService().currentUser;
     if (user == null) {
@@ -102,8 +82,8 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
                   const SizedBox(height: 16),
                   _buildDialogInfoRow(
                     Icons.payments_outlined,
-                    tr('pay'),
-                    'Rs. ${widget.worker.hourlyRate.toInt()} /${tr('pay').toLowerCase()}',
+                    tr('hourly_rate'),
+                    'Rs. ${widget.worker.hourlyRate.toInt()} /${tr('per_hour')}',
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -416,59 +396,41 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _launchWhatsApp,
-                    icon: const Icon(Icons.message, color: Colors.green, size: 20),
-                    label: Text(tr('whatsapp')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE8F5E9),
-                      foregroundColor: Colors.green[800],
-                      elevation: 0,
-                      minimumSize: const Size(double.infinity, 44),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final currentUserId = AuthService().currentUser?.uid;
+                  if (currentUserId == null) return;
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                  );
+                  final chatId = await MessageService().getOrCreateConversation(
+                    currentUserId: currentUserId,
+                    peerId: widget.worker.uid,
+                    peerName: widget.worker.fullName,
+                  );
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(peerName: widget.worker.fullName, conversationId: chatId),
                     ),
-                  ),
+                  );
+                },
+                icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                label: Text(tr('chat')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00BCD4).withValues(alpha: 0.1),
+                  foregroundColor: const Color(0xFF006064),
+                  elevation: 0,
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final currentUserId = AuthService().currentUser?.uid;
-                      if (currentUserId == null) return;
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => const Center(child: CircularProgressIndicator()),
-                      );
-                      final chatId = await MessageService().getOrCreateConversation(
-                        currentUserId: currentUserId,
-                        peerId: widget.worker.uid,
-                        peerName: widget.worker.fullName,
-                      );
-                      if (!context.mounted) return;
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(peerName: widget.worker.fullName, conversationId: chatId),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                    label: Text(tr('chat')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00BCD4).withValues(alpha: 0.1),
-                      foregroundColor: const Color(0xFF006064),
-                      elevation: 0,
-                      minimumSize: const Size(double.infinity, 44),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),

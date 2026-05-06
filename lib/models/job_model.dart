@@ -121,6 +121,7 @@ class ApplicationModel {
   final String status; // 'pending', 'accepted', 'rejected'
   final DateTime? createdAt;
   final String? coverLetter;
+  final double? hourlyRate;
 
   ApplicationModel({
     required this.id,
@@ -133,6 +134,7 @@ class ApplicationModel {
     this.status = 'pending',
     this.createdAt,
     this.coverLetter,
+    this.hourlyRate,
   });
 
   factory ApplicationModel.fromDoc(DocumentSnapshot doc) {
@@ -152,6 +154,7 @@ class ApplicationModel {
       status: data['status'] ?? 'pending',
       createdAt: created,
       coverLetter: data['coverLetter'],
+      hourlyRate: (data['hourlyRate'] ?? 0.0).toDouble(),
     );
   }
 
@@ -165,5 +168,6 @@ class ApplicationModel {
     'status': status,
     'createdAt': FieldValue.serverTimestamp(),
     'coverLetter': coverLetter,
+    'hourlyRate': hourlyRate,
   };
 }
