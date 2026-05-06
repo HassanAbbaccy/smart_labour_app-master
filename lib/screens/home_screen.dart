@@ -1419,10 +1419,10 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
         ),
         _buildCategoryItem(
           'More',
-          Icons.grid_view,
+          Icons.more_horiz,
           const Color(0xFFFAFAFA),
           Colors.grey[700]!,
-          isIcon: false,
+          isIcon: true,
         ),
       ],
     );

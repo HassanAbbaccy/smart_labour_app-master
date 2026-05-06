@@ -32,7 +32,7 @@ class HelpSupportScreen extends StatelessWidget {
               style: TextStyle(color: Colors.grey[600], fontSize: 16),
             ),
             const SizedBox(height: 32),
-            
+
             _buildSectionTitle('Frequently Asked Questions'),
             const SizedBox(height: 16),
             _buildFaqItem(
@@ -51,7 +51,7 @@ class HelpSupportScreen extends StatelessWidget {
               'How to become a verified worker?',
               'Go to your profile and tap "Verify Profile". Upload your CNIC images for our team to review.',
             ),
-            
+
             const SizedBox(height: 32),
             _buildSectionTitle('Contact Us'),
             const SizedBox(height: 16),
@@ -65,7 +65,7 @@ class HelpSupportScreen extends StatelessWidget {
             _buildContactCard(
               icon: Icons.phone_outlined,
               title: 'Call Support',
-              subtitle: '+92 300 0000000',
+              subtitle: '+92 324 9507468',
               color: Colors.green,
             ),
             const SizedBox(height: 48),
