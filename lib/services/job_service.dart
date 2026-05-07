@@ -155,10 +155,13 @@ class JobService {
       id: '', // Firestore will generate
       receiverId: clientId,
       title: 'New Application',
-      body: '${app.workerName} applied for your job: $jobTitle',
+      body: '${app.workerName} applied for your job: $jobTitle at Rs. ${app.hourlyRate?.toInt() ?? 0}/hr',
       type: 'application',
       timestamp: DateTime.now(),
-      data: {'jobId': app.jobId},
+      data: {
+        'jobId': app.jobId,
+        'hourlyRate': app.hourlyRate,
+      },
     ));
   }
 

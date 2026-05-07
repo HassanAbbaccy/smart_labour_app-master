@@ -15,6 +15,7 @@ import '../models/user_model.dart';
 import '../widgets/custom_image_view.dart';
 import 'package:smart_labour/screens/verification_screen.dart';
 import 'package:smart_labour/services/localization_service.dart';
+import 'package:smart_labour/screens/admin_dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -595,6 +596,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               activeThumbColor: const Color(0xFF009688),
                             ),
                           ),
+                          if (userData['role'] == 'Admin')
+                            _buildMenuItem(
+                              icon: Icons.admin_panel_settings_outlined,
+                              title: 'Admin Dashboard',
+                              iconColor: const Color(0xFF673AB7).withValues(alpha: 0.1),
+                              iconTextColor: Colors.deepPurple,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AdminDashboardScreen(),
+                                  ),
+                                );
+                              },
+                            ),
                           _buildMenuItem(
                             icon: Icons.help_outline,
                             title: _isUrdu ? 'مدد اور سپورٹ' : 'Help & Support',

@@ -87,13 +87,19 @@ class JobApplicantsScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                'Rs. ${app.hourlyRate?.toInt() ?? 0} /hr',
-                                style: const TextStyle(
-                                  color: Color(0xFF009688),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.payments_outlined, size: 14, color: Color(0xFF009688)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Rs. ${app.hourlyRate?.toInt() ?? 0} /hr',
+                                    style: const TextStyle(
+                                      color: Color(0xFF009688),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

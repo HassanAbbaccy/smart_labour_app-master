@@ -13,6 +13,8 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController _userSearchController = TextEditingController();
+  String _userSearchQuery = '';
 
   Future<void> _updateStatus(String uid, String status, bool isVerified) async {
     try {
@@ -41,7 +43,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 4,
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAF3),
         appBar: AppBar(
@@ -53,8 +55,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             unselectedLabelColor: Colors.white70,
             indicatorColor: Colors.white,
             tabs: [
-              Tab(icon: Icon(Icons.verified_user), text: 'Verifications'),
-              Tab(icon: Icon(Icons.account_balance_wallet), text: 'Withdrawals'),
+              Tab(icon: Icon(Icons.analytics_outlined), text: 'Analytics'),
+              Tab(icon: Icon(Icons.people_outline), text: 'Users'),
+              Tab(icon: Icon(Icons.verified_user_outlined), text: 'Verifications'),
+              Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: 'Withdrawals'),
             ],
           ),
           actions: [
@@ -96,7 +100,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
       body: TabBarView(
         children: [
-          // TAB 1: Verifications
+          // TAB 1: Analytics
+          _buildAnalyticsTab(),
+
+          // TAB 2: Users
+          _buildUsersTab(),
+
+          // TAB 3: Verifications
           StreamBuilder<QuerySnapshot>(
             stream: _firestore
                 .collection('users')
@@ -412,6 +422,233 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAnalyticsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Platform Overview',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestore.collection('users').snapshots(),
+            builder: (context, userSnap) {
+              return StreamBuilder<QuerySnapshot>(
+                stream: _firestore.collection('jobs').snapshots(),
+                builder: (context, jobSnap) {
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: _firestore.collection('withdrawals').where('status', isEqualTo: 'completed').snapshots(),
+                    builder: (context, payoutSnap) {
+                      final totalUsers = userSnap.hasData ? userSnap.data!.docs.length : 0;
+                      final totalJobs = jobSnap.hasData ? jobSnap.data!.docs.length : 0;
+                      
+                      double totalRevenue = 0;
+                      if (payoutSnap.hasData) {
+                        for (var doc in payoutSnap.data!.docs) {
+                          totalRevenue += (doc.data() as Map<String, dynamic>)['platformFee'] ?? 0.0;
+                        }
+                      }
+
+                      double totalEscrow = 0;
+                      if (userSnap.hasData) {
+                        for (var doc in userSnap.data!.docs) {
+                          totalEscrow += (doc.data() as Map<String, dynamic>)['escrowBalance'] ?? 0.0;
+                        }
+                      }
+
+                      return GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 1.2,
+                        children: [
+                          _buildStatCard('Total Users', totalUsers.toString(), Icons.people, Colors.blue),
+                          _buildStatCard('Total Jobs', totalJobs.toString(), Icons.work, Colors.orange),
+                          _buildStatCard('Revenue', 'Rs. ${totalRevenue.toInt()}', Icons.trending_up, Colors.green),
+                          _buildStatCard('In Escrow', 'Rs. ${totalEscrow.toInt()}', Icons.lock_clock, Colors.teal),
+                        ],
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 32),
+          const Text(
+            'Recent Growth',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 150,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+            ),
+            child: const Center(
+              child: Text(
+                'Chart Placeholder\n(Growth data visualization)',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 30),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            title,
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUsersTab() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextField(
+            controller: _userSearchController,
+            decoration: InputDecoration(
+              hintText: 'Search users by name...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: (val) {
+              setState(() {
+                _userSearchQuery = val.toLowerCase();
+              });
+            },
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _firestore.collection('users').snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              var docs = snapshot.data?.docs ?? [];
+              
+              if (_userSearchQuery.isNotEmpty) {
+                docs = docs.where((d) {
+                  final data = d.data() as Map<String, dynamic>;
+                  final name = '${data['firstName']} ${data['lastName']}'.toLowerCase();
+                  return name.contains(_userSearchQuery);
+                }).toList();
+              }
+
+              if (docs.isEmpty) {
+                return const Center(child: Text('No users found'));
+              }
+
+              return ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: docs.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final doc = docs[index];
+                  final data = doc.data() as Map<String, dynamic>;
+                  final role = data['role'] ?? 'Client';
+                  final isVerified = data['isVerified'] ?? false;
+
+                  return ListTile(
+                    tileColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    leading: CircleAvatar(
+                      backgroundColor: role == 'Worker' ? const Color(0xFFE0F2F1) : const Color(0xFFE3F2FD),
+                      child: Icon(
+                        role == 'Worker' ? Icons.engineering : Icons.person,
+                        color: role == 'Worker' ? Colors.teal : Colors.blue,
+                        size: 20,
+                      ),
+                    ),
+                    title: Row(
+                      children: [
+                        Text('${data['firstName']} ${data['lastName']}'),
+                        if (isVerified) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified, color: Color(0xFF00BCD4), size: 14),
+                        ],
+                      ],
+                    ),
+                    subtitle: Text(role),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                    onTap: () {
+                      // Show basic info dialog
+                      showDialog(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: Text('${data['firstName']} ${data['lastName']}'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Email: ${data['email'] ?? 'N/A'}'),
+                              Text('Phone: ${data['phoneNumber'] ?? 'N/A'}'),
+                              Text('Role: $role'),
+                              if (role == 'Worker') Text('Profession: ${data['profession'] ?? 'N/A'}'),
+                              Text('Joined: ${data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate().toString().split(' ')[0] : 'Unknown'}'),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
