@@ -263,9 +263,25 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              widget.worker.fullName,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A1C18)),
+                            Row(
+                              children: [
+                                Text(
+                                  widget.worker.fullName,
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1A1C18),
+                                  ),
+                                ),
+                                if (widget.worker.isVerified) ...[
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.verified,
+                                    color: Color(0xFF00BCD4),
+                                    size: 22,
+                                  ),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 4),
                             Text(widget.worker.profession, style: TextStyle(fontSize: 16, color: Colors.grey[600])),

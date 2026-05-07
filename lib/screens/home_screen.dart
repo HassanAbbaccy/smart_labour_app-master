@@ -1522,6 +1522,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                   uid: worker.uid,
                   profession: worker.profession,
                   hourlyRate: worker.hourlyRate,
+                  isVerified: worker.isVerified,
                 ),
               );
             }).toList(),
@@ -1539,6 +1540,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     String? uid,
     String? profession,
     double? hourlyRate,
+    bool isVerified = false,
   }) {
     final workerUid = uid ?? name.hashCode.toString();
     final workerProfession = profession ?? 'Professional Worker';
@@ -1564,6 +1566,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                     rating: rating,
                     completedJobs: jobs,
                     hourlyRate: workerRate,
+                    isVerified: isVerified,
                   ),
                 ),
             transitionsBuilder:
@@ -1617,12 +1620,24 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                         ),
                       ),
                     ),
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (isVerified) ...[
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.verified,
+                          color: Color(0xFF00BCD4),
+                          size: 14,
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Row(

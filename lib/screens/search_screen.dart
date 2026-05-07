@@ -349,13 +349,28 @@ class _SearchScreenState extends State<SearchScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              worker.fullName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    worker.fullName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (worker.isVerified) ...[
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.verified,
+                    color: Color(0xFF4DB6AC),
+                    size: 16,
+                  ),
+                ],
+              ],
             ),
             Text(
               worker.profession,
@@ -433,6 +448,14 @@ class _SearchScreenState extends State<SearchScreen> {
                               fontSize: 16,
                             ),
                           ),
+                          if (worker.isVerified) ...[
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.verified,
+                              color: Color(0xFF00BCD4),
+                              size: 14,
+                            ),
+                          ],
                           if (worker.rating >= 4.5) ...[
                             const SizedBox(width: 8),
                             Container(

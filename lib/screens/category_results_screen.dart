@@ -199,6 +199,14 @@ class CategoryResultsScreen extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          if (worker.isVerified) ...[
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.verified,
+                              color: Color(0xFF00BCD4),
+                              size: 14,
+                            ),
+                          ],
                           if (worker.rating >= 4.5) ...[
                             const SizedBox(width: 8),
                             Container(

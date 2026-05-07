@@ -248,11 +248,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           showDialog(
             context: context,
             builder: (_) => Dialog(
+              backgroundColor: Colors.transparent,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AppBar(title: Text(label), backgroundColor: Colors.black),
-                  Image.asset('assets/images/service_placeholder.png', fit: BoxFit.contain),
+                  AppBar(
+                    title: Text(label),
+                    backgroundColor: Colors.black.withValues(alpha: 0.8),
+                    foregroundColor: Colors.white,
+                    leading: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  InteractiveViewer(
+                    child: Image.network(
+                      url,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(40.0),
+                            child: CircularProgressIndicator(color: Colors.white),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 200,
+                        color: Colors.grey[900],
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.white, size: 40),
+                              SizedBox(height: 8),
+                              Text('Failed to load image', style: TextStyle(color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -269,7 +306,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: url != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.asset('assets/images/service_placeholder.png', fit: BoxFit.cover),
+                child: Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                  },
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: Icon(Icons.broken_image, color: Colors.grey),
+                  ),
+                ),
               )
             : Center(child: Text('No $label')),
       ),

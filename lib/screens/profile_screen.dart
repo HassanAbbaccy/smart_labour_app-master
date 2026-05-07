@@ -13,7 +13,8 @@ import 'package:smart_labour/screens/withdrawal_screen.dart';
 import 'package:animate_do/animate_do.dart';
 import '../models/user_model.dart';
 import '../widgets/custom_image_view.dart';
-import '../services/localization_service.dart';
+import 'package:smart_labour/screens/verification_screen.dart';
+import 'package:smart_labour/services/localization_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -400,13 +401,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    displayName,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1A1C18),
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        displayName,
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1A1C18),
+                                        ),
+                                      ),
+                                      if (userData['isVerified'] == true) ...[
+                                        const SizedBox(width: 6),
+                                        const Icon(
+                                          Icons.verified,
+                                          color: Color(0xFF00BCD4),
+                                          size: 18,
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -539,6 +552,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   )
                                   .toList(),
                             ),
+                            const SizedBox(height: 32),
+                          ],
+
+                          // Verification Section (Only for Workers who are not verified)
+                          if (userData['role'] == 'Worker' &&
+                              userData['verificationStatus'] != 'verified') ...[
+                            _buildVerificationSection(userData),
                             const SizedBox(height: 32),
                           ],
 
@@ -701,6 +721,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     ),
+    );
+  }
+
+  Widget _buildVerificationSection(Map<String, dynamic> userData) {
+    final status = userData['verificationStatus'] ?? 'none';
+    final isPending = status == 'pending';
+    final isRejected = status == 'rejected';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isPending ? Colors.amber.withValues(alpha: 0.1) : const Color(0xFF009688).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isPending ? Colors.amber.withValues(alpha: 0.3) : const Color(0xFF009688).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isPending ? Icons.hourglass_empty : Icons.verified_user_outlined,
+                color: isPending ? Colors.orange : const Color(0xFF009688),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                isPending ? 'Verification Pending' : 'Get Verified',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isPending ? Colors.orange[800] : const Color(0xFF009688),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isPending
+                ? 'We are currently reviewing your documents. This process usually takes 24-48 hours.'
+                : isRejected
+                    ? 'Your previous verification request was rejected. Please re-upload clear documents.'
+                    : 'Verify your identity to build trust with clients and unlock more high-paying jobs.',
+            style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.5),
+          ),
+          if (!isPending) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => VerificationScreen(
+                        user: UserModel.fromMap(userData, AuthService().firebaseUser!.uid),
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF009688),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(isRejected ? 'Re-upload Documents' : 'Start Verification'),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
