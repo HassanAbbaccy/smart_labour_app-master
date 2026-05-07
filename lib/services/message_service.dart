@@ -15,6 +15,7 @@ class MessageService {
     required String currentUserId,
     required String peerId,
     required String peerName,
+    String? peerAvatar,
   }) async {
     final chatId = getConversationId(currentUserId, peerId);
     final docRef = _firestore.collection('chats').doc(chatId);
@@ -31,7 +32,7 @@ class MessageService {
           'unreadCount': 0,
           'participantData': {
             currentUserId: {'name': 'User', 'role': 'Client'},
-            peerId: {'name': peerName, 'role': 'Worker'},
+            peerId: {'name': peerName, 'role': 'Worker', 'avatarUrl': peerAvatar},
           },
         });
       }

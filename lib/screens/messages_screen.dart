@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smart_labour/services/message_service.dart';
 import 'package:smart_labour/services/auth_service.dart';
+import 'package:smart_labour/widgets/custom_image_view.dart';
 import 'package:intl/intl.dart';
 import 'chat_screen.dart';
 
@@ -176,8 +177,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
     // Determine peer name
     final names = conv['names'] as Map<String, dynamic>? ?? {};
     String peerName = 'User';
+    String? peerAvatar;
+    final participantData = conv['participantData'] as Map<String, dynamic>? ?? {};
+    
     names.forEach((uid, name) {
-      if (uid != currentUserId) peerName = name;
+      if (uid != currentUserId) {
+        peerName = name;
+        peerAvatar = participantData[uid]?['avatarUrl'];
+      }
     });
 
     final lastMessage = conv['lastMessage'] ?? '';
@@ -209,17 +216,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: const Color(0xFF009688).withValues(alpha: 0.1),
-              child: Text(
-                peerName.isNotEmpty ? peerName[0] : '?',
-                style: const TextStyle(
-                  color: Color(0xFF009688),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            CustomImageView(
+              url: peerAvatar,
+              width: 56,
+              height: 56,
+              borderRadius: 28,
             ),
             const SizedBox(width: 16),
             Expanded(

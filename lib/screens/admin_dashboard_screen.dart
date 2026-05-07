@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../widgets/custom_image_view.dart';
 import 'signin_screen.dart';
 import '../models/report_model.dart';
 
@@ -731,14 +732,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const SizedBox(height: 24),
             Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: isWorker ? const Color(0xFFE0F2F1) : const Color(0xFFE3F2FD),
-                  child: Icon(
-                    isWorker ? Icons.engineering : Icons.person,
-                    color: isWorker ? Colors.teal : Colors.blue,
-                    size: 30,
-                  ),
+                CustomImageView(
+                  url: data['avatarUrl'],
+                  width: 60,
+                  height: 60,
+                  borderRadius: 30,
+                  placeholder: isWorker ? 'assets/images/worker_placeholder.png' : 'assets/images/user_placeholder.png',
                 ),
                 const SizedBox(width: 16),
                 Expanded(

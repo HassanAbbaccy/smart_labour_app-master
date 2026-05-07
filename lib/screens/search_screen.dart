@@ -29,7 +29,7 @@ class _SearchScreenState extends State<SearchScreen> {
   // Advanced filters
   double _minPrice = 0;
   double _maxPrice = 10000;
-  double _maxDistance = 50; // km
+  double _maxDistance = 10000; // Default to Any (10000 km)
   bool _verifiedOnly = false;
 
   @override
@@ -161,15 +161,21 @@ class _SearchScreenState extends State<SearchScreen> {
                         
                         // Calculate distance if client position is available
                         final currentUser = AuthService().currentUser;
-                        if (currentUser != null &&
-                            worker.lastLatitude != null &&
-                            worker.lastLongitude != null) {
-                          
+                        
+                        // Treat 0,0 as uninitialized/invalid location
+                        bool hasValidLocation = worker.lastLatitude != null && 
+                                             worker.lastLongitude != null && 
+                                             worker.lastLatitude != 0.0 && 
+                                             worker.lastLongitude != 0.0;
+
+                        if (currentUser != null && hasValidLocation) {
                           // Prioritize real-time local position over Firestore profile data
                           final lat = currentPos?.latitude ?? currentUser.lastLatitude;
                           final lng = currentPos?.longitude ?? currentUser.lastLongitude;
 
-                          if (lat != null && lng != null) {
+                          bool hasUserLocation = lat != null && lng != null && lat != 0.0 && lng != 0.0;
+
+                          if (hasUserLocation) {
                             double distanceInMeters = Geolocator.distanceBetween(
                               lat,
                               lng,
@@ -177,9 +183,11 @@ class _SearchScreenState extends State<SearchScreen> {
                               worker.lastLongitude!,
                             );
                             worker.tempDistance = distanceInMeters / 1000.0;
+                          } else {
+                            worker.tempDistance = null;
                           }
                         } else {
-                          worker.tempDistance = double.maxFinite;
+                          worker.tempDistance = null;
                         }
                         
                         return worker;
@@ -213,7 +221,17 @@ class _SearchScreenState extends State<SearchScreen> {
 
                         // Advanced filters
                         bool matchesPrice = worker.hourlyRate >= _minPrice && worker.hourlyRate <= _maxPrice;
-                        bool matchesDistance = (worker.tempDistance ?? 0) <= _maxDistance;
+                        
+                        // If we have a distance, it must be within range. 
+                        // If max distance is very high (default), we show all workers.
+                        bool matchesDistance = true;
+                        if (worker.tempDistance != null) {
+                          matchesDistance = worker.tempDistance! <= _maxDistance;
+                        } else {
+                          // If distance is unknown, we only show if no distance filter is active
+                          // (Active means _maxDistance <= 200 km)
+                          matchesDistance = _maxDistance > 200;
+                        }
                         bool matchesVerification = !_verifiedOnly || worker.isVerified;
 
                         return matchesFilter && matchesSearch && matchesPrice && matchesDistance && matchesVerification;
@@ -587,7 +605,8 @@ class _SearchScreenState extends State<SearchScreen> {
   void _showFilterBottomSheet() {
     double tempMinPrice = _minPrice;
     double tempMaxPrice = _maxPrice;
-    double tempMaxDistance = _maxDistance;
+    // Map internal 10000 to UI 101
+    double tempMaxDistance = _maxDistance > 200 ? 101 : _maxDistance;
     bool tempVerifiedOnly = _verifiedOnly;
 
     showModalBottomSheet(
@@ -643,14 +662,14 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    Text('Max Distance: ${tempMaxDistance.toInt()} km'),
+                    Text('Max Distance: ${tempMaxDistance > 100 ? 'Any' : '${tempMaxDistance.toInt()} km'}'),
                     Slider(
                       value: tempMaxDistance,
                       min: 1,
-                      max: 100,
-                      divisions: 20,
+                      max: 101,
+                      divisions: 100,
                       activeColor: const Color(0xFF009688),
-                      label: '${tempMaxDistance.toInt()} km',
+                      label: tempMaxDistance > 100 ? 'Any' : '${tempMaxDistance.toInt()} km',
                       onChanged: (val) {
                         setModalState(() => tempMaxDistance = val);
                       },
@@ -674,7 +693,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           setState(() {
                             _minPrice = tempMinPrice;
                             _maxPrice = tempMaxPrice;
-                            _maxDistance = tempMaxDistance;
+                            _maxDistance = tempMaxDistance > 100 ? 10000 : tempMaxDistance;
                             _verifiedOnly = tempVerifiedOnly;
                           });
                           Navigator.pop(context);
