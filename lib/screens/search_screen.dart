@@ -585,8 +585,14 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _showFilterBottomSheet() {
+    double tempMinPrice = _minPrice;
+    double tempMaxPrice = _maxPrice;
+    double tempMaxDistance = _maxDistance;
+    bool tempVerifiedOnly = _verifiedOnly;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -594,89 +600,111 @@ class _SearchScreenState extends State<SearchScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Filter Workers',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  Text('Price Range (Rs. ${_minPrice.toInt()} - Rs. ${_maxPrice.toInt()})'),
-                  RangeSlider(
-                    values: RangeValues(_minPrice, _maxPrice),
-                    min: 0,
-                    max: 10000,
-                    divisions: 20,
-                    activeColor: const Color(0xFF009688),
-                    labels: RangeLabels('Rs. ${_minPrice.toInt()}', 'Rs. ${_maxPrice.toInt()}'),
-                    onChanged: (values) {
-                      setModalState(() {
-                        _minPrice = values.start;
-                        _maxPrice = values.end;
-                      });
-                      setState(() {});
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  Text('Max Distance: ${_maxDistance.toInt()} km'),
-                  Slider(
-                    value: _maxDistance,
-                    min: 1,
-                    max: 100,
-                    divisions: 20,
-                    activeColor: const Color(0xFF009688),
-                    label: '${_maxDistance.toInt()} km',
-                    onChanged: (val) {
-                      setModalState(() => _maxDistance = val);
-                      setState(() {});
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  SwitchListTile(
-                    title: const Text('Verified Workers Only'),
-                    value: _verifiedOnly,
-                    activeThumbColor: const Color(0xFF009688),
-                    onChanged: (val) {
-                      setModalState(() => _verifiedOnly = val);
-                      setState(() {});
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF009688),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Apply Filters'),
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Filter Workers',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
                     ),
-                  ),
-                  Center(
-                    child: TextButton(
-                      onPressed: () {
+                    const SizedBox(height: 24),
+                    
+                    Text('Price Range (Rs. ${tempMinPrice.toInt()} - Rs. ${tempMaxPrice.toInt()})'),
+                    RangeSlider(
+                      values: RangeValues(tempMinPrice, tempMaxPrice),
+                      min: 0,
+                      max: 10000,
+                      divisions: 20,
+                      activeColor: const Color(0xFF009688),
+                      labels: RangeLabels('Rs. ${tempMinPrice.toInt()}', 'Rs. ${tempMaxPrice.toInt()}'),
+                      onChanged: (values) {
                         setModalState(() {
-                          _minPrice = 0;
-                          _maxPrice = 10000;
-                          _maxDistance = 50;
-                          _verifiedOnly = false;
+                          tempMinPrice = values.start;
+                          tempMaxPrice = values.end;
                         });
-                        setState(() {});
                       },
-                      child: const Text('Reset Filters', style: TextStyle(color: Colors.red)),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+
+                    Text('Max Distance: ${tempMaxDistance.toInt()} km'),
+                    Slider(
+                      value: tempMaxDistance,
+                      min: 1,
+                      max: 100,
+                      divisions: 20,
+                      activeColor: const Color(0xFF009688),
+                      label: '${tempMaxDistance.toInt()} km',
+                      onChanged: (val) {
+                        setModalState(() => tempMaxDistance = val);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    SwitchListTile(
+                      title: const Text('Verified Workers Only'),
+                      value: tempVerifiedOnly,
+                      activeThumbColor: const Color(0xFF009688),
+                      onChanged: (val) {
+                        setModalState(() => tempVerifiedOnly = val);
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _minPrice = tempMinPrice;
+                            _maxPrice = tempMaxPrice;
+                            _maxDistance = tempMaxDistance;
+                            _verifiedOnly = tempVerifiedOnly;
+                          });
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF009688),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Apply Filters'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _minPrice = 0;
+                            _maxPrice = 10000;
+                            _maxDistance = 50;
+                            _verifiedOnly = false;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Reset Filters', style: TextStyle(color: Colors.red)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },

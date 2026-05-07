@@ -5,6 +5,9 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import '../services/job_service.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class PaymentScreen extends StatefulWidget {
   final String jobId;
@@ -31,12 +34,30 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String selectedMethod = 'EasyPaisa';
   bool isProcessing = false;
   final TextEditingController _mobileController = TextEditingController();
+  File? _receiptImage;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickReceipt() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _receiptImage = File(image.path);
+      });
+    }
+  }
 
   Future<void> _processPayment() async {
     if ((selectedMethod == 'EasyPaisa' || selectedMethod == 'JazzCash') &&
         _mobileController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your mobile number')),
+      );
+      return;
+    }
+
+    if (selectedMethod == 'Bank Transfer' && _receiptImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload your payment receipt')),
       );
       return;
     }
@@ -163,23 +184,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
       setState(() => isProcessing = true);
       try {
         final currentUserName = AuthService().currentUser?.fullName ?? 'A Client';
+        final cleanAmount = widget.amount.replaceAll(RegExp(r'[^0-9.]'), '');
+        final amt = double.tryParse(cleanAmount) ?? 0.0;
+
+        String? receiptUrl;
+        if (_receiptImage != null) {
+          receiptUrl = await StorageService().uploadFile(
+            file: _receiptImage!,
+            path: 'receipts/${widget.jobId}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          );
+        }
+
         await FirebaseFirestore.instance
             .collection('jobs')
             .doc(widget.jobId)
             .update({
-              'paymentStatus': 'IN_ESCROW',
+              'paymentStatus': 'WAITING_FOR_APPROVAL',
               'paymentMethod': selectedMethod,
-              'status': 'HIRED', 
-              'workerId': widget.workerId,
-              'workerName': widget.workerName,
+              'receiptUrl': receiptUrl,
+              'paymentAmount': amt,
             });
 
-        final cleanAmount = widget.amount.replaceAll(RegExp(r'[^0-9.]'), '');
-        final amt = double.tryParse(cleanAmount) ?? 0.0;
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(widget.workerId)
-            .update({'escrowBalance': FieldValue.increment(amt)});
+        if (mounted) {
+          _showSuccessDialog(
+            title: 'Receipt Uploaded!',
+            message: 'Your payment receipt has been sent for verification. You will be notified once the admin approves it.',
+          );
+        }
 
         // Notify Worker
         await JobService().notifyWorkerHired(
@@ -188,10 +219,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
           currentUserName,
           widget.jobTitle,
         );
-
-        if (mounted) {
-          _showSuccessDialog();
-        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -207,7 +234,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog({String? title, String? message}) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -218,13 +245,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 80),
             const SizedBox(height: 24),
-            const Text(
-              'Payment Successful!',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            Text(
+              title ?? 'Payment Successful!',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(
-              'Your booking with ${widget.workerName} is confirmed.',
+              message ?? 'Your booking with ${widget.workerName} is confirmed.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
@@ -398,11 +425,45 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                   filled: true,
                   fillColor: Colors.white,
-                ),
               ),
-            ],
+            ),
+          ],
+          
+          if (selectedMethod == 'Bank Transfer') ...[
+            const SizedBox(height: 24),
+            const Text(
+              'Upload Payment Receipt',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: _pickReceipt,
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: _receiptImage != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(_receiptImage!, fit: BoxFit.cover),
+                      )
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+                          SizedBox(height: 8),
+                          Text('Click to upload screenshot', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+              ),
+            ),
+          ],
 
-            const SizedBox(height: 48),
+          const SizedBox(height: 48),
 
             SizedBox(
               width: double.infinity,

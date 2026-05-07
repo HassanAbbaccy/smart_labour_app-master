@@ -44,7 +44,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAF3),
         appBar: AppBar(
@@ -61,6 +61,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Tab(icon: Icon(Icons.report_problem_outlined), text: 'Reports'),
               Tab(icon: Icon(Icons.verified_user_outlined), text: 'Verifications'),
               Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: 'Withdrawals'),
+              Tab(icon: Icon(Icons.payments_outlined), text: 'Payments'),
             ],
           ),
           actions: [
@@ -141,32 +142,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             },
           ),
           
-          // TAB 2: Withdrawals
-          StreamBuilder<QuerySnapshot>(
-            stream: _firestore
-                .collection('withdrawals')
-                .where('status', isEqualTo: 'pending')
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          // TAB 5: Withdrawals
+          _buildWithdrawalsTab(),
 
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text('No pending withdrawals'));
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: snapshot.data!.docs.length,
-                itemBuilder: (context, index) {
-                  final doc = snapshot.data!.docs[index];
-                  final data = doc.data() as Map<String, dynamic>;
-                  return _buildWithdrawalCard(doc.id, data);
-                },
-              );
-            },
-          ),
+          // TAB 6: Payments
+          _buildPaymentsTab(),
         ],
       ),
     ),
@@ -856,6 +836,132 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildWithdrawalsTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection('withdrawals').where('status', isEqualTo: 'pending').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text('No pending withdrawals'));
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final doc = snapshot.data!.docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            return _buildWithdrawalCard(doc.id, data);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentsTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection('jobs').where('paymentStatus', isEqualTo: 'WAITING_FOR_APPROVAL').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text('No pending payments'));
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final doc = snapshot.data!.docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final receiptUrl = data['receiptUrl'];
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: ExpansionTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFFE0F2F1), child: Icon(Icons.receipt_long, color: Colors.teal)),
+                title: Text('Job: ${data['title'] ?? 'N/A'}'),
+                subtitle: Text('Amount: Rs. ${data['paymentAmount'] ?? 'N/A'}'),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (receiptUrl != null) ...[
+                          const Text('Payment Receipt:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              receiptUrl,
+                              height: 300,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                height: 100,
+                                color: Colors.grey[200],
+                                child: const Center(child: Text('Error loading image')),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  // APPROVE: Set to HIRED and IN_ESCROW
+                                  final workerId = data['workerId'];
+                                  final amount = (data['paymentAmount'] ?? 0.0).toDouble();
+                                  
+                                  await _firestore.collection('jobs').doc(doc.id).update({
+                                    'paymentStatus': 'IN_ESCROW',
+                                    'status': 'HIRED',
+                                  });
+
+                                  if (workerId != null) {
+                                    await _firestore.collection('users').doc(workerId).update({
+                                      'escrowBalance': FieldValue.increment(amount),
+                                    });
+                                  }
+
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment Approved!')));
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                                child: const Text('Approve'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  // REJECT: Reset to PENDING
+                                  await _firestore.collection('jobs').doc(doc.id).update({
+                                    'paymentStatus': 'PENDING',
+                                    'receiptUrl': null,
+                                  });
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment Rejected')));
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                                child: const Text('Reject'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

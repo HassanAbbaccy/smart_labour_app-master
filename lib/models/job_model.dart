@@ -22,6 +22,8 @@ class JobModel {
   final DateTime? startedAt;
   final DateTime? completedAt;
   final DateTime? scheduledAt;
+  final String? receiptUrl;
+  final double? paymentAmount;
 
   JobModel({
     required this.id,
@@ -44,6 +46,8 @@ class JobModel {
     this.startedAt,
     this.completedAt,
     this.scheduledAt,
+    this.receiptUrl,
+    this.paymentAmount,
   });
 
   factory JobModel.fromDoc(DocumentSnapshot doc) {
@@ -84,6 +88,8 @@ class JobModel {
       startedAt: started,
       completedAt: completed,
       scheduledAt: scheduled,
+      receiptUrl: data['receiptUrl'],
+      paymentAmount: (data['paymentAmount'] ?? 0.0).toDouble(),
     );
   }
 
@@ -107,6 +113,8 @@ class JobModel {
     'startedAt': startedAt != null ? Timestamp.fromDate(startedAt!) : null,
     'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
     'scheduledAt': scheduledAt != null ? Timestamp.fromDate(scheduledAt!) : null,
+    'receiptUrl': receiptUrl,
+    'paymentAmount': paymentAmount,
   };
 }
 
