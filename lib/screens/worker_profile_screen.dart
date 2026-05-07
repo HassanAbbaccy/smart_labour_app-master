@@ -10,6 +10,7 @@ import 'package:smart_labour/models/user_model.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:smart_labour/services/localization_service.dart';
 import '../widgets/custom_image_view.dart';
+import '../models/report_model.dart';
 
 class WorkerProfileScreen extends StatefulWidget {
   final UserModel worker;
@@ -230,6 +231,89 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
     }
   }
 
+  void _showReportDialog() {
+    final currentUser = AuthService().currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to report users')),
+      );
+      return;
+    }
+
+    final detailsController = TextEditingController();
+    String selectedReason = 'Inappropriate behavior';
+    final List<String> reasons = [
+      'Inappropriate behavior',
+      'Fraud or scam',
+      'Poor service quality',
+      'Late or no-show',
+      'Other',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Worker'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedReason,
+                items: reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                onChanged: (val) => setState(() => selectedReason = val!),
+                decoration: const InputDecoration(labelText: 'Reason'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: detailsController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Details',
+                  hintText: 'Provide more information...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (detailsController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please provide details')),
+                );
+                return;
+              }
+
+              final report = ReportModel(
+                id: '',
+                reportedById: currentUser.uid,
+                reportedId: widget.worker.uid,
+                type: 'user',
+                reason: selectedReason,
+                details: detailsController.text,
+                createdAt: DateTime.now(),
+              );
+
+              await FirebaseFirestore.instance.collection('reports').add(report.toMap());
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Report submitted successfully'), backgroundColor: Colors.green),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Submit Report'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -239,6 +323,13 @@ class _WorkerProfileScreenState extends State<WorkerProfileScreen> {
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.report_problem_outlined, color: Colors.white),
+                tooltip: 'Report Worker',
+                onPressed: _showReportDialog,
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Hero(
                 tag: 'worker_image_${widget.worker.uid}',

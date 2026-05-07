@@ -25,6 +25,12 @@ class _SearchScreenState extends State<SearchScreen> {
   ];
   String _selectedFilter = 'All';
   String _searchQuery = '';
+  
+  // Advanced filters
+  double _minPrice = 0;
+  double _maxPrice = 10000;
+  double _maxDistance = 50; // km
+  bool _verifiedOnly = false;
 
   @override
   void dispose() {
@@ -52,18 +58,33 @@ class _SearchScreenState extends State<SearchScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value.trim().toLowerCase();
-                        });
-                      },
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: 'Electrician, painter...',
-                        hintStyle: TextStyle(color: Colors.black45),
-                      ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value.trim().toLowerCase();
+                              });
+                            },
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              hintText: 'Electrician, painter...',
+                              hintStyle: TextStyle(color: Colors.black45),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.tune,
+                            color: (_maxPrice < 10000 || _maxDistance < 50 || _verifiedOnly)
+                                ? const Color(0xFF009688)
+                                : Colors.black54,
+                          ),
+                          onPressed: _showFilterBottomSheet,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -189,7 +210,13 @@ class _SearchScreenState extends State<SearchScreen> {
                                 (s) => s.toLowerCase().contains(_searchQuery),
                               );
                         }
-                        return matchesFilter && matchesSearch;
+
+                        // Advanced filters
+                        bool matchesPrice = worker.hourlyRate >= _minPrice && worker.hourlyRate <= _maxPrice;
+                        bool matchesDistance = (worker.tempDistance ?? 0) <= _maxDistance;
+                        bool matchesVerification = !_verifiedOnly || worker.isVerified;
+
+                        return matchesFilter && matchesSearch && matchesPrice && matchesDistance && matchesVerification;
                       }).toList();
 
                       // Sort by distance
@@ -554,6 +581,107 @@ class _SearchScreenState extends State<SearchScreen> {
           Text(message, style: TextStyle(color: Colors.grey[600])),
         ],
       ),
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Filter Workers',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  Text('Price Range (Rs. ${_minPrice.toInt()} - Rs. ${_maxPrice.toInt()})'),
+                  RangeSlider(
+                    values: RangeValues(_minPrice, _maxPrice),
+                    min: 0,
+                    max: 10000,
+                    divisions: 20,
+                    activeColor: const Color(0xFF009688),
+                    labels: RangeLabels('Rs. ${_minPrice.toInt()}', 'Rs. ${_maxPrice.toInt()}'),
+                    onChanged: (values) {
+                      setModalState(() {
+                        _minPrice = values.start;
+                        _maxPrice = values.end;
+                      });
+                      setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  Text('Max Distance: ${_maxDistance.toInt()} km'),
+                  Slider(
+                    value: _maxDistance,
+                    min: 1,
+                    max: 100,
+                    divisions: 20,
+                    activeColor: const Color(0xFF009688),
+                    label: '${_maxDistance.toInt()} km',
+                    onChanged: (val) {
+                      setModalState(() => _maxDistance = val);
+                      setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  SwitchListTile(
+                    title: const Text('Verified Workers Only'),
+                    value: _verifiedOnly,
+                    activeThumbColor: const Color(0xFF009688),
+                    onChanged: (val) {
+                      setModalState(() => _verifiedOnly = val);
+                      setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF009688),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Apply Filters'),
+                    ),
+                  ),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        setModalState(() {
+                          _minPrice = 0;
+                          _maxPrice = 10000;
+                          _maxDistance = 50;
+                          _verifiedOnly = false;
+                        });
+                        setState(() {});
+                      },
+                      child: const Text('Reset Filters', style: TextStyle(color: Colors.red)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import 'welcome_screen.dart';
+import '../models/report_model.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -43,7 +44,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         backgroundColor: const Color(0xFFF9FAF3),
         appBar: AppBar(
@@ -57,6 +58,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             tabs: [
               Tab(icon: Icon(Icons.analytics_outlined), text: 'Analytics'),
               Tab(icon: Icon(Icons.people_outline), text: 'Users'),
+              Tab(icon: Icon(Icons.report_problem_outlined), text: 'Reports'),
               Tab(icon: Icon(Icons.verified_user_outlined), text: 'Verifications'),
               Tab(icon: Icon(Icons.account_balance_wallet_outlined), text: 'Withdrawals'),
             ],
@@ -106,7 +108,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           // TAB 2: Users
           _buildUsersTab(),
 
-          // TAB 3: Verifications
+          // TAB 3: Reports
+          _buildReportsTab(),
+
+          // TAB 4: Verifications
           StreamBuilder<QuerySnapshot>(
             stream: _firestore
                 .collection('users')
@@ -638,6 +643,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                           actions: [
                             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                            const Spacer(),
+                            if (role == 'Worker')
+                              TextButton(
+                                onPressed: () async {
+                                  final isFeatured = data['isFeatured'] ?? false;
+                                  await _firestore.collection('users').doc(doc.id).update({'isFeatured': !isFeatured});
+                                  if (context.mounted) Navigator.pop(context);
+                                },
+                                child: Text(data['isFeatured'] == true ? 'Unfeature' : 'Feature', style: const TextStyle(color: Colors.orange)),
+                              ),
+                            TextButton(
+                              onPressed: () async {
+                                final isSuspended = data['isSuspended'] ?? false;
+                                await _firestore.collection('users').doc(doc.id).update({'isSuspended': !isSuspended});
+                                if (context.mounted) Navigator.pop(context);
+                              },
+                              child: Text(data['isSuspended'] == true ? 'Unsuspend' : 'Suspend', style: const TextStyle(color: Colors.red)),
+                            ),
                           ],
                         ),
                       );
@@ -649,6 +672,90 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReportsTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection('reports').orderBy('createdAt', descending: true).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No reports filed yet'));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final doc = snapshot.data!.docs[index];
+            final report = ReportModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+            final isPending = report.status == 'pending';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ExpansionTile(
+                leading: Icon(
+                  report.type == 'user' ? Icons.person_outline : Icons.work_outline,
+                  color: isPending ? Colors.orange : Colors.grey,
+                ),
+                title: Text(
+                  '${report.reason} (${report.type})',
+                  style: TextStyle(fontWeight: isPending ? FontWeight.bold : FontWeight.normal),
+                ),
+                subtitle: Text('Status: ${report.status.toUpperCase()}'),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Details:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text(report.details),
+                        const SizedBox(height: 12),
+                        Text('Reported ID: ${report.reportedId}'),
+                        Text('Reported By: ${report.reportedById}'),
+                        const SizedBox(height: 16),
+                        if (isPending)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () async {
+                                  await _firestore.collection('reports').doc(doc.id).update({'status': 'dismissed'});
+                                },
+                                child: const Text('Dismiss', style: TextStyle(color: Colors.grey)),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  await _firestore.collection('reports').doc(doc.id).update({'status': 'resolved'});
+                                  // In a real app, you might navigate to the user profile here
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Report marked as resolved')),
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF009688), foregroundColor: Colors.white),
+                                child: const Text('Resolve'),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

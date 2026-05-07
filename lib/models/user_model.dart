@@ -27,6 +27,8 @@ class UserModel {
   final String? fcmToken;
   final double? lastLatitude;
   final double? lastLongitude;
+  final bool isSuspended;
+  final bool isFeatured;
   double? tempDistance; // Transient field for search results
 
   UserModel({
@@ -58,6 +60,8 @@ class UserModel {
     this.fcmToken,
     this.lastLatitude,
     this.lastLongitude,
+    this.isSuspended = false,
+    this.isFeatured = false,
   });
 
   String get fullName => '$firstName $lastName';
@@ -94,6 +98,8 @@ class UserModel {
       fcmToken: map['fcmToken'],
       lastLatitude: (map['lastLatitude'] ?? 0.0).toDouble(),
       lastLongitude: (map['lastLongitude'] ?? 0.0).toDouble(),
+      isSuspended: map['isSuspended'] ?? false,
+      isFeatured: map['isFeatured'] ?? false,
     );
   }
 
@@ -126,6 +132,8 @@ class UserModel {
       'fcmToken': fcmToken,
       'lastLatitude': lastLatitude,
       'lastLongitude': lastLongitude,
+      'isSuspended': isSuspended,
+      'isFeatured': isFeatured,
     };
   }
 }

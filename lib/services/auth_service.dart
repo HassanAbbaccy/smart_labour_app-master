@@ -135,6 +135,14 @@ class AuthService {
       // Load user data from Firestore
       await _loadUserFromFirestore(userCredential.user!.uid);
 
+      if (_currentUser?.isSuspended == true) {
+        await signOut();
+        return {
+          'success': false,
+          'message': 'Your account has been suspended by the administrator.',
+        };
+      }
+
       return {
         'success': true,
         'message': 'Sign in successful',
@@ -323,6 +331,14 @@ class AuthService {
           });
         }
         await _loadUserFromFirestore(user.uid);
+      }
+
+      if (_currentUser?.isSuspended == true) {
+        await signOut();
+        return {
+          'success': false,
+          'message': 'Your account has been suspended by the administrator.',
+        };
       }
 
       return {

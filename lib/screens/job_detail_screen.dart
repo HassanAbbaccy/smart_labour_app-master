@@ -5,6 +5,8 @@ import '../services/auth_service.dart';
 import 'job_applicants_screen.dart';
 import 'package:intl/intl.dart';
 import '../services/localization_service.dart';
+import '../models/report_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final JobModel? job;
@@ -248,6 +250,88 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
+  void _showReportDialog() {
+    final currentUser = AuthService().currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to report jobs')),
+      );
+      return;
+    }
+
+    final detailsController = TextEditingController();
+    String selectedReason = 'Fraud or scam';
+    final List<String> reasons = [
+      'Fraud or scam',
+      'Inappropriate content',
+      'Misleading description',
+      'Other',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Job'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedReason,
+                items: reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                onChanged: (val) => setState(() => selectedReason = val!),
+                decoration: const InputDecoration(labelText: 'Reason'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: detailsController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Details',
+                  hintText: 'Provide more information...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (detailsController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please provide details')),
+                );
+                return;
+              }
+
+              final report = ReportModel(
+                id: '',
+                reportedById: currentUser.uid,
+                reportedId: widget.job?.id ?? '',
+                type: 'job',
+                reason: selectedReason,
+                details: detailsController.text,
+                createdAt: DateTime.now(),
+              );
+
+              await FirebaseFirestore.instance.collection('reports').add(report.toMap());
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Report submitted successfully'), backgroundColor: Colors.green),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Submit Report'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final j = widget.job;
@@ -258,6 +342,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         backgroundColor: const Color(0xFF009688),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (j != null)
+            IconButton(
+              icon: const Icon(Icons.report_problem_outlined),
+              tooltip: 'Report Job',
+              onPressed: _showReportDialog,
+            ),
+        ],
       ),
       body: j == null
           ? const Center(child: Text('Job not found'))
