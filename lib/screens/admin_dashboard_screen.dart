@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
-import 'welcome_screen.dart';
+import 'signin_screen.dart';
 import '../models/report_model.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -72,7 +72,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               if (!context.mounted) return;
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                MaterialPageRoute(builder: (_) => const SignInScreen()),
                 (route) => false,
               );
             },
@@ -625,45 +625,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     subtitle: Text(role),
                     trailing: const Icon(Icons.chevron_right, color: Colors.grey),
                     onTap: () {
-                      // Show basic info dialog
-                      showDialog(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: Text('${data['firstName']} ${data['lastName']}'),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Email: ${data['email'] ?? 'N/A'}'),
-                              Text('Phone: ${data['phoneNumber'] ?? 'N/A'}'),
-                              Text('Role: $role'),
-                              if (role == 'Worker') Text('Profession: ${data['profession'] ?? 'N/A'}'),
-                              Text('Joined: ${data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate().toString().split(' ')[0] : 'Unknown'}'),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-                            const Spacer(),
-                            if (role == 'Worker')
-                              TextButton(
-                                onPressed: () async {
-                                  final isFeatured = data['isFeatured'] ?? false;
-                                  await _firestore.collection('users').doc(doc.id).update({'isFeatured': !isFeatured});
-                                  if (context.mounted) Navigator.pop(context);
-                                },
-                                child: Text(data['isFeatured'] == true ? 'Unfeature' : 'Feature', style: const TextStyle(color: Colors.orange)),
-                              ),
-                            TextButton(
-                              onPressed: () async {
-                                final isSuspended = data['isSuspended'] ?? false;
-                                await _firestore.collection('users').doc(doc.id).update({'isSuspended': !isSuspended});
-                                if (context.mounted) Navigator.pop(context);
-                              },
-                              child: Text(data['isSuspended'] == true ? 'Unsuspend' : 'Suspend', style: const TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        ),
-                      );
+                      _showUserDetailSheet(context, doc.id, data);
                     },
                   );
                 },
@@ -756,6 +718,144 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           },
         );
       },
+    );
+  }
+
+  void _showUserDetailSheet(BuildContext context, String uid, Map<String, dynamic> data) {
+    final role = data['role'] ?? 'Client';
+    final isWorker = role == 'Worker';
+    final isSuspended = data['isSuspended'] ?? false;
+    final isFeatured = data['isFeatured'] ?? false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: isWorker ? const Color(0xFFE0F2F1) : const Color(0xFFE3F2FD),
+                  child: Icon(
+                    isWorker ? Icons.engineering : Icons.person,
+                    color: isWorker ? Colors.teal : Colors.blue,
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${data['firstName']} ${data['lastName']}',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        role,
+                        style: TextStyle(color: isWorker ? Colors.teal : Colors.blue, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSuspended)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(12)),
+                    child: const Text('SUSPENDED', style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            _buildDetailRow(Icons.email_outlined, 'Email', data['email'] ?? 'N/A'),
+            const SizedBox(height: 16),
+            _buildDetailRow(Icons.phone_outlined, 'Phone', data['phoneNumber'] ?? 'N/A'),
+            const SizedBox(height: 16),
+            if (isWorker) ...[
+              _buildDetailRow(Icons.work_outline, 'Profession', data['profession'] ?? 'N/A'),
+              const SizedBox(height: 16),
+            ],
+            _buildDetailRow(
+              Icons.calendar_today_outlined,
+              'Member Since',
+              data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate().toString().split(' ')[0] : 'Unknown',
+            ),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                if (isWorker) ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await _firestore.collection('users').doc(uid).update({'isFeatured': !isFeatured});
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isFeatured ? Colors.orange[100] : Colors.grey[100],
+                        foregroundColor: isFeatured ? Colors.orange[900] : Colors.grey[700],
+                        elevation: 0,
+                      ),
+                      icon: Icon(isFeatured ? Icons.star : Icons.star_border),
+                      label: Text(isFeatured ? 'Unfeature' : 'Feature'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await _firestore.collection('users').doc(uid).update({'isSuspended': !isSuspended});
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isSuspended ? Colors.green[50] : Colors.red[50],
+                      foregroundColor: isSuspended ? Colors.green : Colors.red,
+                      elevation: 0,
+                    ),
+                    icon: Icon(isSuspended ? Icons.check_circle_outline : Icons.block),
+                    label: Text(isSuspended ? 'Unsuspend' : 'Suspend'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey[600]),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+            Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ],
     );
   }
 }
